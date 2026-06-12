@@ -156,7 +156,7 @@ Uses Deepseek / OpenAI / Anthropic to generate:
 ### 4. Install & Run
 
 ```bash
-git clone https://github.com/Cubiczan/codesentinel.git
+git clone https://github.com/icohangar-ops/codesentinel.git
 cd codesentinel
 npm install
 cp .env.sample .env
