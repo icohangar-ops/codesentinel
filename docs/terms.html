@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service — CodeSentinel</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0F172A; color: #F8FAFC; line-height: 1.7; }
+    a { color: #38BDF8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 720px; margin: 0 auto; padding: 60px 20px 80px; }
+    h1 { font-size: 2rem; margin-bottom: 8px; }
+    .back { color: #64748B; margin-bottom: 40px; display: inline-block; }
+    h2 { font-size: 1.2rem; color: #38BDF8; margin: 28px 0 10px; }
+    p, li { color: #CBD5E1; font-size: 0.95rem; margin-bottom: 10px; }
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    .updated { color: #64748B; font-size: 0.85rem; margin-bottom: 32px; }
+    footer { text-align: center; padding: 40px 20px; border-top: 1px solid #1E293B; color: #64748B; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <a href="index.html" class="back">&larr; Back to CodeSentinel</a>
+    <h1>Terms of Service</h1>
+    <p class="updated">Last updated: June 13, 2026</p>
+
+    <h2>Acceptance of Terms</h2>
+    <p>By installing or using CodeSentinel ("the App"), you agree to be bound by these Terms of Service. If you do not agree, do not install or use the App.</p>
+
+    <h2>Description of Service</h2>
+    <p>CodeSentinel is an open-source Slack application that analyzes software codebases for dead code, circular dependencies, coupling issues, and architectural drift. The App provides analysis results within Slack conversations and optionally via an MCP (Model Context Protocol) server. CodeSentinel is provided as-is and is intended for use in professional software development environments.</p>
+
+    <h2>Open Source License</h2>
+    <p>CodeSentinel is licensed under the MIT License. You may use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the software, subject to the conditions of the MIT License. The full license text is available in the source repository.</p>
+
+    <h2>User Responsibilities</h2>
+    <p>As a user of CodeSentinel, you are responsible for:</p>
+    <ul>
+      <li>Ensuring your use complies with your organization's policies regarding third-party Slack applications and external API usage.</li>
+      <li>Properly securing API keys and Slack tokens used to configure the App.</li>
+      <li>Reviewing and validating analysis results before acting on them. CodeSentinel provides suggestions and findings, but the user is solely responsible for any code changes made based on those suggestions.</li>
+      <li>Ensuring that any codebase analyzed with CodeSentinel does not contain confidential or proprietary information that should not be processed by external LLM services, if AI summaries are enabled.</li>
+    </ul>
+
+    <h2>No Warranty</h2>
+    <p>CodeSentinel is provided "AS IS" without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, and non-infringement. In no event shall the authors or copyright holders be liable for any claim, damages, or other liability arising from the use of the App.</p>
+
+    <h2>Analysis Accuracy</h2>
+    <p>CodeSentinel's analysis results are generated using pattern matching and demo data. The current version uses illustrative findings to demonstrate the App's capabilities. The accuracy, completeness, and relevance of any analysis result is not guaranteed. Users should independently verify findings before making code changes, especially in production environments.</p>
+
+    <h2>External Services</h2>
+    <p>CodeSentinel may interact with external services including Slack, GitHub, GitLab, and LLM providers (Deepseek, OpenAI, Anthropic). Your use of these services is subject to their respective terms of service. CodeSentinel is not responsible for the availability, pricing, or policies of these third-party services.</p>
+
+    <h2>Limitation of Liability</h2>
+    <p>Under no circumstances shall the creators of CodeSentinel be liable for any direct, indirect, incidental, special, consequential, or exemplary damages resulting from the use of or inability to use the App, including but not limited to loss of data, business interruption, or any other commercial damages or losses.</p>
+
+    <h2>Modifications to Terms</h2>
+    <p>We reserve the right to update these Terms of Service at any time. Changes will be reflected on this page with an updated revision date. Your continued use of CodeSentinel after any changes constitutes acceptance of the new terms.</p>
+
+    <h2>Governing Law</h2>
+    <p>These Terms of Service shall be governed by and construed in accordance with applicable laws, without regard to conflict of law principles.</p>
+
+    <h2>Contact</h2>
+    <p>For questions about these Terms, please open an issue on <a href="https://github.com/Cubiczan/codesentinel/issues">GitHub Issues</a>.</p>
+  </div>
+
+  <footer>
+    <p>MIT &copy; 2026 CodeSentinel &middot; <a href="support.html">Support</a> &middot; <a href="privacy.html">Privacy</a></p>
+  </footer>
+
+</body>
+</html>

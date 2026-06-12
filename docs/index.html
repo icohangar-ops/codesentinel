@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeSentinel — AI Codebase Health Agent for Slack</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <meta name="description" content="AI-powered codebase health agent for Slack. Detects dead code, circular dependencies, coupling issues, and architectural drift.">
+  <meta property="og:title" content="CodeSentinel — AI Codebase Health Agent for Slack">
+  <meta property="og:description" content="Detect dead code, circular dependencies, coupling issues, and architectural drift — all without leaving Slack.">
+  <meta property="og:image" content="icon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0F172A; color: #F8FAFC; line-height: 1.6; }
+    a { color: #38BDF8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .hero { text-align: center; padding: 80px 20px 60px; max-width: 800px; margin: 0 auto; }
+    .hero img { width: 120px; height: 120px; border-radius: 24px; margin-bottom: 24px; }
+    .hero h1 { font-size: 3rem; font-weight: 800; margin-bottom: 8px; background: linear-gradient(135deg, #38BDF8, #0EA5E9); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero .tagline { font-size: 1.25rem; color: #94A3B8; margin-bottom: 24px; }
+    .hero .badges { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; }
+    .badge-slack { background: #4A154B; color: white; }
+    .badge-mcp { background: #065F46; color: #A7F3D0; }
+    .badge-bolt { background: #1E3A5F; color: #93C5FD; }
+    .badge-blockkit { background: #4C1D47; color: #F9A8D4; }
+
+    .cta { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #38BDF8, #0EA5E9); color: #0F172A; font-weight: 700; font-size: 1.1rem; border-radius: 12px; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; }
+    .cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(56,189,248,0.3); text-decoration: none; }
+
+    .features { max-width: 1000px; margin: 0 auto; padding: 40px 20px 80px; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+    .card { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 28px; }
+    .card h3 { font-size: 1.15rem; margin-bottom: 8px; color: #38BDF8; }
+    .card p { color: #CBD5E1; font-size: 0.95rem; }
+
+    .arch { text-align: center; padding: 40px 20px 60px; max-width: 900px; margin: 0 auto; }
+    .arch h2 { font-size: 1.8rem; margin-bottom: 24px; }
+    .arch img { max-width: 100%; border-radius: 16px; border: 1px solid #334155; }
+
+    .install { text-align: center; padding: 60px 20px 80px; }
+    .install h2 { font-size: 1.8rem; margin-bottom: 16px; }
+    .install pre { background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 20px; display: inline-block; text-align: left; max-width: 600px; width: 100%; overflow-x: auto; color: #A7F3D0; font-size: 0.9rem; }
+
+    footer { text-align: center; padding: 40px 20px; border-top: 1px solid #1E293B; color: #64748B; font-size: 0.85rem; }
+    footer .links { display: flex; gap: 20px; justify-content: center; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+  <section class="hero">
+    <img src="icon.png" alt="CodeSentinel icon">
+    <h1>CodeSentinel</h1>
+    <p class="tagline">AI-Powered Codebase Health Agent for Slack</p>
+    <div class="badges">
+      <span class="badge badge-slack">Slack Agent Builder</span>
+      <span class="badge badge-mcp">MCP Protocol</span>
+      <span class="badge badge-bolt">Bolt.js</span>
+      <span class="badge badge-blockkit">Block Kit</span>
+    </div>
+    <a href="https://github.com/Cubiczan/codesentinel" class="cta">View on GitHub</a>
+  </section>
+
+  <section class="features">
+    <div class="card">
+      <h3>Dead Code Detection</h3>
+      <p>Finds unused functions, classes, modules, and exports. Each finding includes file path, line number, severity, and fix suggestions.</p>
+    </div>
+    <div class="card">
+      <h3>Circular Dependency Analysis</h3>
+      <p>DFS-based cycle detection across module imports. Shows the exact import chain, impact assessment, and remediation strategy.</p>
+    </div>
+    <div class="card">
+      <h3>Coupling Metrics</h3>
+      <p>Measures fan-out per module, identifies tightly coupled clusters, and provides refactoring suggestions like Facade or DIP.</p>
+    </div>
+    <div class="card">
+      <h3>Architectural Drift Detection</h3>
+      <p>Checks for layer boundary violations: UI importing from data, business layer breaching into UI, and shared module contamination.</p>
+    </div>
+    <div class="card">
+      <h3>Full Health Scan</h3>
+      <p>Runs all four analyses and computes a 0–100 health score with letter grade, category breakdown, and AI-generated executive summary.</p>
+    </div>
+    <div class="card">
+      <h3>MCP Server</h3>
+      <p>Standalone MCP server with 6 analysis tools. Works with Claude Desktop, Cursor, Windsurf, or any MCP-compatible client.</p>
+    </div>
+  </section>
+
+  <section class="arch">
+    <h2>Architecture</h2>
+    <img src="architecture.png" alt="CodeSentinel architecture diagram">
+  </section>
+
+  <section class="install">
+    <h2>Quick Install</h2>
+    <pre>git clone https://github.com/Cubiczan/codesentinel.git
+cd codesentinel
+npm install
+cp .env.sample .env
+# Edit .env with your Slack tokens and LLM API key
+npm start</pre>
+  </section>
+
+  <footer>
+    <div class="links">
+      <a href="https://github.com/Cubiczan/codesentinel">GitHub</a>
+      <a href="support.html">Support</a>
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="terms.html">Terms of Service</a>
+    </div>
+    <p>MIT &copy; 2026 &middot; Built for the Slack Agent Builder Challenge</p>
+  </footer>
+
+</body>
+</html>

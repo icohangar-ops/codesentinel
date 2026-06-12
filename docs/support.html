@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Support — CodeSentinel</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0F172A; color: #F8FAFC; line-height: 1.7; }
+    a { color: #38BDF8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 720px; margin: 0 auto; padding: 60px 20px 80px; }
+    h1 { font-size: 2rem; margin-bottom: 8px; }
+    .back { color: #64748B; margin-bottom: 40px; display: inline-block; }
+    h2 { font-size: 1.3rem; color: #38BDF8; margin: 32px 0 12px; }
+    p, li { color: #CBD5E1; font-size: 0.95rem; margin-bottom: 12px; }
+    ul { padding-left: 20px; margin-bottom: 16px; }
+    .card { background: #1E293B; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+    .card p { margin-bottom: 0; }
+    code { background: #334155; padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #A7F3D0; }
+    footer { text-align: center; padding: 40px 20px; border-top: 1px solid #1E293B; color: #64748B; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <a href="index.html" class="back">&larr; Back to CodeSentinel</a>
+    <h1>Support</h1>
+    <p style="color:#94A3B8">Get help with CodeSentinel</p>
+
+    <h2>Getting Started</h2>
+    <p>Follow the <a href="https://github.com/Cubiczan/codesentinel#-quick-start">Quick Start guide</a> in the GitHub README to set up CodeSentinel in your Slack workspace. You'll need a Slack Developer Program sandbox, a Bolt.js app created from the included manifest, and an LLM API key.</p>
+
+    <h2>Frequently Asked Questions</h2>
+
+    <div class="card">
+      <h2 style="margin-top:0">How do I connect CodeSentinel to my repository?</h2>
+      <p>Mention CodeSentinel in a Slack message with a GitHub or GitLab URL, e.g. <code>@CodeSentinel run full health scan on https://github.com/org/repo</code>. You can also use the suggested prompts in the assistant view without specifying a repository.</p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">Which LLM providers are supported?</h2>
+      <p>CodeSentinel supports Deepseek (default), OpenAI, and Anthropic. Set the <code>LLM_PROVIDER</code> environment variable and the corresponding API key in your <code>.env</code> file.</p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">Can I use CodeSentinel outside of Slack?</h2>
+      <p>Yes. CodeSentinel ships a standalone MCP server with 6 analysis tools. You can connect it to Claude Desktop, Cursor, Windsurf, or any MCP-compatible client by adding the server configuration to your MCP settings file.</p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0">The app shows "Analyzing..." but never responds</h2>
+      <p>Check that your <code>SLACK_APP_TOKEN</code> is set correctly (starts with <code>xapp-</code>) and that Socket Mode is enabled in your Slack app settings. Also verify your LLM API key is valid and has available credits.</p>
+    </div>
+
+    <h2>Report a Bug</h2>
+    <p>Open an issue on <a href="https://github.com/Cubiczan/codesentinel/issues">GitHub Issues</a>. Include your Node.js version, Slack app configuration, and any relevant error logs from the console.</p>
+
+    <h2>Feature Requests</h2>
+    <p>We welcome ideas for new analyzers, integrations, or improvements. Open a <a href="https://github.com/Cubiczan/codesentinel/issues">GitHub Issue</a> with the <code>enhancement</code> label.</p>
+
+    <h2>Contact</h2>
+    <p>For security concerns or questions not covered here, reach out via <a href="https://github.com/Cubiczan/codesentinel/issues">GitHub Issues</a>.</p>
+  </div>
+
+  <footer>
+    <p>MIT &copy; 2026 CodeSentinel &middot; <a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a></p>
+  </footer>
+
+</body>
+</html>

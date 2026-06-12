@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — CodeSentinel</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0F172A; color: #F8FAFC; line-height: 1.7; }
+    a { color: #38BDF8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 720px; margin: 0 auto; padding: 60px 20px 80px; }
+    h1 { font-size: 2rem; margin-bottom: 8px; }
+    .back { color: #64748B; margin-bottom: 40px; display: inline-block; }
+    h2 { font-size: 1.2rem; color: #38BDF8; margin: 28px 0 10px; }
+    p, li { color: #CBD5E1; font-size: 0.95rem; margin-bottom: 10px; }
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    .updated { color: #64748B; font-size: 0.85rem; margin-bottom: 32px; }
+    footer { text-align: center; padding: 40px 20px; border-top: 1px solid #1E293B; color: #64748B; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <a href="index.html" class="back">&larr; Back to CodeSentinel</a>
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: June 13, 2026</p>
+
+    <h2>Overview</h2>
+    <p>CodeSentinel is an open-source Slack application that analyzes codebase health. This privacy policy explains what data CodeSentinel collects, how it is used, and how it is protected.</p>
+
+    <h2>Data Collection</h2>
+    <p>CodeSentinel collects and processes the following types of data:</p>
+    <ul>
+      <li><strong>Slack Messages:</strong> When a user interacts with CodeSentinel in Slack, the app reads the user's message to determine the analysis intent (e.g., "scan for dead code"). Messages are processed in real-time and are not stored persistently.</li>
+      <li><strong>Repository URLs:</strong> If a user provides a GitHub or GitLab URL, CodeSentinel fetches public repository metadata (name, default branch, language) via their respective APIs. No code content is downloaded or stored.</li>
+      <li><strong>Analysis Results:</strong> Analysis results are returned as Slack messages in the conversation thread. Results are generated using built-in demo analyzers and are not stored on any server.</li>
+    </ul>
+
+    <h2>LLM API Usage</h2>
+    <p>CodeSentinel can optionally use an external LLM API (Deepseek, OpenAI, or Anthropic) to generate AI summaries of analysis results. When enabled, analysis findings are sent to the configured LLM provider for summarization. The LLM provider's own privacy policy governs how that data is handled. You can disable AI summaries by omitting the LLM API key from your configuration.</p>
+
+    <h2>No Persistent Storage</h2>
+    <p>CodeSentinel does not maintain a database, log file, or any persistent storage of user data. All processing happens in-memory during the request-response cycle. Analysis results exist only as Slack messages in the user's conversation thread, subject to Slack's own data retention policies.</p>
+
+    <h2>Third-Party Services</h2>
+    <p>CodeSentinel may interact with the following third-party services:</p>
+    <ul>
+      <li><strong>Slack:</strong> Message delivery and Block Kit UI rendering — governed by <a href="https://slack.com/privacy-policy">Slack's Privacy Policy</a>.</li>
+      <li><strong>GitHub / GitLab:</strong> Public repository metadata API — governed by their respective privacy policies.</li>
+      <li><strong>LLM Providers:</strong> Optional AI summarization — governed by the provider's privacy policy.</li>
+    </ul>
+
+    <h2>Data Sharing</h2>
+    <p>CodeSentinel does not sell, share, or transfer any user data to third parties for marketing or advertising purposes. Data is only shared with the services listed above as necessary to provide CodeSentinel's functionality.</p>
+
+    <h2>Security</h2>
+    <p>CodeSentinel runs on your own infrastructure (or locally). Slack communication is encrypted via TLS. API keys are stored in environment variables and are never transmitted to any server other than the intended API endpoint. The source code is open-source and available for security review on GitHub.</p>
+
+    <h2>Slack Scopes</h2>
+    <p>CodeSentinel requests the minimum Slack OAuth scopes necessary to function. The bot token has access to read and write in channels where it is invited. It does not access DMs or channels it has not been added to, except for the direct message channel with the user who invokes it.</p>
+
+    <h2>Children's Privacy</h2>
+    <p>CodeSentinel is a developer tool intended for use by adults in professional software development environments. It is not directed at children under the age of 13.</p>
+
+    <h2>Changes to This Policy</h2>
+    <p>We may update this privacy policy from time to time. Changes will be posted on this page with an updated revision date. Continued use of CodeSentinel after changes constitutes acceptance of the updated policy.</p>
+
+    <h2>Contact</h2>
+    <p>For privacy-related questions or concerns, please open an issue on <a href="https://github.com/Cubiczan/codesentinel/issues">GitHub Issues</a>.</p>
+  </div>
+
+  <footer>
+    <p>MIT &copy; 2026 CodeSentinel &middot; <a href="support.html">Support</a> &middot; <a href="terms.html">Terms</a></p>
+  </footer>
+
+</body>
+</html>
