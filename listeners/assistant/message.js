@@ -1,4 +1,4 @@
-const { callLLM } = require("../../lib/llm-provider");
+const { callLLM, LLMUnavailableError } = require("../../lib/llm-provider");
 const { parseAnalysisRequest } = require("../../lib/intent-parser");
 const { runAnalysis } = require("../../lib/analysis-engine");
 const { buildResponseBlocks } = require("../../lib/block-kit-builder");
@@ -95,8 +95,14 @@ async function handleAssistantMessage(app) {
 
     } catch (error) {
       logger.error("Error handling message:", error);
+      // Surface a clean, user-safe message instead of leaking raw exception
+      // text (API keys, stack traces, provider internals) into Slack.
+      const userText =
+        error instanceof LLMUnavailableError
+          ? error.userMessage
+          : "Something went wrong while analyzing the codebase. Please try again or provide a valid GitHub/GitLab repository URL.";
       await say({
-        text: `❌ Sorry, something went wrong while analyzing the codebase.\n\`\`\`\n${error.message}\n\`\`\`\nPlease try again or provide a valid GitHub/GitLab repository URL.`,
+        text: `❌ ${userText}`,
         thread_ts: threadTs,
       });
     }
