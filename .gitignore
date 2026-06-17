@@ -1,3 +1,25 @@
+# Dependencies
 node_modules/
-.env
+
+# Build output
 dist/
+build/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# OS / editor
+.DS_Store
+*.swp
+*~
+
+# Large demo media (kept out of git; host externally)
+*.mp4
