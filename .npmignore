@@ -1,0 +1,9 @@
+node_modules
+.env
+.env.local
+.git
+
+# Heavy media / demo assets not needed at runtime
+*.mp4
+*.png
+video/
