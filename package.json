@@ -1,11 +1,11 @@
 {
   "name": "@cubiczan/codesentinel-mcp",
   "version": "1.0.2",
-  "description": "Codebase health as MCP tools \u2014 dead code, circular dependencies, coupling, and architectural drift for Claude Desktop, Cursor, Windsurf and Slack.",
+  "description": "Codebase health as MCP tools — dead code, circular dependencies, coupling, and architectural drift for Claude Desktop, Cursor, Windsurf and Slack.",
   "mcpName": "io.github.icohangar-ops/codesentinel-mcp",
   "main": "app.js",
   "bin": {
-    "codesentinel-mcp": "./mcp-server/index.js"
+    "codesentinel-mcp": "mcp-server/index.js"
   },
   "scripts": {
     "start": "node app.js",
