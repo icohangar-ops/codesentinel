@@ -1,12 +1,18 @@
-FROM node:18-alpine
+# Glama MCP introspection (stdio). Paste into Glama Dockerfile admin if needed.
+# Node 22: Glama's Node 23 Nodesource install has failed in the past.
+
+FROM node:22-slim
 
 WORKDIR /app
 
-COPY mcp-server/package*.json ./mcp-server/
-RUN cd mcp-server && npm ci --production
+COPY package.json package-lock.json ./
+COPY mcp-server ./mcp-server
+COPY lib ./lib
 
-COPY mcp-server/ ./mcp-server/
+RUN npm ci --omit=dev --no-audit --no-fund \
+  && npm cache clean --force
 
-EXPOSE 3000
+ENV NODE_ENV=production
+ENV DAYTONA_DISABLE=1
 
 CMD ["node", "mcp-server/index.js"]
