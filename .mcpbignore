@@ -1,0 +1,13 @@
+.git/
+.github/
+coverage/
+*.mp4
+.env*
+functions/
+app.js
+manifest.json
+mcpb/
+scripts/
+*.md
+!README.md
+LICENSE

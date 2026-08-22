@@ -11,7 +11,11 @@
     "start": "node app.js",
     "dev": "node --watch app.js",
     "lint": "eslint **/*.js",
-    "mcp:start": "node mcp-server/index.js"
+    "mcp:start": "node mcp-server/index.js",
+    "mcpb:pack": "bash scripts/mcpb-pack.sh",
+    "mcpb:validate": "mcpb validate mcpb/manifest.json",
+    "smithery:publish": "bash scripts/smithery-publish-mcpb.sh",
+    "smithery:agent-token": "bash scripts/smithery-agent-token.sh"
   },
   "dependencies": {
     "@daytona/sdk": "^0.190.1",

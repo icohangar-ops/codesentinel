@@ -1,0 +1,21 @@
+{
+  "manifest_version": "0.2",
+  "name": "codesentinel-mcp",
+  "version": "1.0.2",
+  "description": "Codebase health MCP tools — dead code, circular dependencies, coupling, and architectural drift.",
+  "author": {
+    "name": "Cubiczan / icohangar-ops"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "./mcp-server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/mcp-server/index.js"],
+      "env": {
+        "DAYTONA_DISABLE": "1"
+      }
+    }
+  },
+  "license": "MIT"
+}
