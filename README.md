@@ -4,11 +4,12 @@
 
 **Codebase health analysis that works everywhere.** Dead code, circular dependencies, coupling issues, and architectural drift — exposed as MCP tools for Claude Desktop, Cursor, Windsurf, and Slack.
 
+[![npm](https://img.shields.io/npm/v/@cubiczan/codesentinel-mcp)](https://www.npmjs.com/package/@cubiczan/codesentinel-mcp)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-io.github.icohangar--ops%2Fcodesentinel--mcp-00C4B4)](https://registry.modelcontextprotocol.io)
 [![MCP](https://img.shields.io/badge/MCP-Protocol-00C4B4?logo=modelcontextprotocol&logoColor=white)](https://modelcontextprotocol.io)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-Listed-00C4B4?logo=modelcontextprotocol&logoColor=white)](https://github.com/modelcontextprotocol/registry)
-[![awesome-mcp-servers](https://img.shields.io/badge/awesome--mcp--servers-Listed-blue)](https://github.com/appcypher/awesome-mcp-servers)
+[![awesome-mcp-servers](https://img.shields.io/badge/awesome--mcp--servers-Listed-blue)](https://github.com/punkpeye/awesome-mcp-servers)
 
 </div>
 
@@ -44,29 +45,38 @@ Dead code, circular dependencies, excessive coupling, and architectural drift ar
 | **Slack** | Built-in Agent Builder integration with Block Kit UI |
 | **Any MCP client** | Standard MCP server (stdio) |
 
-### Claude Desktop Config
+---
+
+## Install
+
+```bash
+npm install -g @cubiczan/codesentinel-mcp
+npx -y @cubiczan/codesentinel-mcp
+```
+
+**MCP Registry:** `io.github.icohangar-ops/codesentinel-mcp`  
+**npm:** [@cubiczan/codesentinel-mcp](https://www.npmjs.com/package/@cubiczan/codesentinel-mcp) **1.0.1**
+
+### Claude Desktop / Cursor
 
 ```json
 {
   "mcpServers": {
-    "codehealth": {
-      "command": "node",
-      "args": ["/path/to/codehealth-mcp/mcp-server/index.js"]
+    "codesentinel": {
+      "command": "npx",
+      "args": ["-y", "@cubiczan/codesentinel-mcp"]
     }
   }
 }
 ```
 
----
-
-## Quick Start
+## Quick Start (from source)
 
 ```bash
-git clone https://github.com/icohangar-ops/codehealth-mcp.git
-cd codehealth-mcp
+git clone https://github.com/icohangar-ops/codesentinel.git
+cd codesentinel
 npm install
 cp .env.sample .env
-# Edit .env with your LLM API key
 npm start
 ```
 
@@ -201,7 +211,7 @@ Add a new analyzer in `lib/analyzers/`, register it in `analysis-engine.js`, and
 ## Project Structure
 
 ```
-codehealth-mcp/
+codesentinel/
 ├── app.js                    # Bolt app entry (Slack)
 ├── manifest.json             # Slack app manifest
 ├── lib/
@@ -220,10 +230,9 @@ codehealth-mcp/
 
 ## Community & Registry
 
-CodeHealth MCP is listed in the following directories:
-
-- **[awesome-mcp-servers](https://github.com/appcypher/awesome-mcp-servers)** – A curated list of MCP servers.
-- **[MCP Registry](https://github.com/modelcontextprotocol/registry)** – Official registry for Model Context Protocol servers.
+- **npm** — [@cubiczan/codesentinel-mcp](https://www.npmjs.com/package/@cubiczan/codesentinel-mcp)
+- **MCP Registry** — [io.github.icohangar-ops/codesentinel-mcp](https://registry.modelcontextprotocol.io)
+- **[awesome-mcp-servers](https://github.com/punkpeye/awesome-mcp-servers)**
 
 ---
 
