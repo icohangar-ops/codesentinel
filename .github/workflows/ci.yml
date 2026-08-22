@@ -24,6 +24,10 @@ jobs:
             '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' \
           | node mcp-server/index.js > /tmp/mcp-out.ndjson
           grep -q '"name":"CodeSentinel"' /tmp/mcp-out.ndjson
+          # serverInfo.version must track package.json — it drifted to 1.0.0
+          # once already, and Glama surfaces whatever the server reports.
+          PKG_VERSION="$(node -p 'require("./package.json").version')"
+          grep -q "\"version\":\"${PKG_VERSION}\"" /tmp/mcp-out.ndjson
           grep -q 'analyze_dead_code' /tmp/mcp-out.ndjson
           grep -q 'full_health_scan' /tmp/mcp-out.ndjson
           test "$(grep -c '"jsonrpc"' /tmp/mcp-out.ndjson)" -ge 2
