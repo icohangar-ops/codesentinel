@@ -9,7 +9,7 @@ async function handleAppMention(app) {
 
     if (!userText) {
       await say({
-        text: "👋 Hi! I'm *CodeSentinel*, your codebase health agent.\n\nI can analyze your code for:\n• *Dead code* — unused functions, classes, modules\n• *Circular dependencies* — module import cycles\n• *Coupling metrics* — fan-out analysis, tightly coupled clusters\n• *Architectural drift* — layer boundary violations\n\nJust mention me with a GitHub/GitLab repo URL or describe what you'd like to scan!",
+        text: "👋 Hi! I'm *CodeSentinel*, your codebase health agent.\n\nI can analyze your code for:\n• *Dead code* — unused functions, classes, modules\n• *Circular dependencies* — module import cycles\n• *Coupling metrics* — fan-out analysis, tightly coupled clusters\n• *Architectural drift* — layer boundary violations\n• *MCP protocol health* — initialize + tools/list (HTTP 200 is not enough)\n\nJust mention me with a GitHub/GitLab repo URL, an MCP endpoint, or describe what you'd like to scan!",
         thread_ts: event.ts,
       });
       return;

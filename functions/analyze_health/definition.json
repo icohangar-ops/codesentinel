@@ -8,7 +8,7 @@
     "properties": {
       "analysis_type": {
         "type": "string",
-        "enum": ["dead_code", "circular_deps", "coupling", "drift", "full"],
+        "enum": ["dead_code", "circular_deps", "coupling", "drift", "mcp_health", "full"],
         "description": "Type of analysis to run"
       },
       "repo_url": {

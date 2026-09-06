@@ -1,7 +1,7 @@
 {
   "name": "codesentinel-mcp-server",
   "version": "1.0.0",
-  "description": "CodeSentinel MCP Server — exposes code analysis tools via Model Context Protocol",
+  "description": "CodeSentinel MCP Server — codebase analysis plus remote MCP protocol health (handshake ≠ HTTP 200)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

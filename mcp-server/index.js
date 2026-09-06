@@ -14,6 +14,7 @@
  *  - detect_architectural_drift: Check layer boundary violations
  *  - full_health_scan: Run all analyses and return a health score
  *  - explain_finding: Get AI-powered explanation of a specific finding
+ *  - check_mcp_health: Remote MCP handshake health (initialize + tools/list)
  */
 
 const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
@@ -26,12 +27,11 @@ const { detectCircularDeps } = require("../lib/analyzers/circular-deps");
 const { analyzeCoupling } = require("../lib/analyzers/coupling");
 const { detectDrift } = require("../lib/analyzers/drift");
 const { resolveRepo } = require("../lib/mcp-repo");
-
-const { version: packageVersion } = require("../package.json");
+const { checkMcpHealth } = require("../src/lib/mcp-health");
 
 const server = new McpServer({
   name: "CodeSentinel",
-  version: packageVersion,
+  version: "1.0.0",
   description: "AI-powered codebase health analysis — dead code, circular deps, coupling, architectural drift",
 });
 
@@ -231,7 +231,37 @@ server.tool(
   }
 );
 
-// Tool 6: Explain Finding (AI-powered)
+// Tool 6: Remote MCP protocol health (not HTTP uptime)
+server.tool(
+  "check_mcp_health",
+  "Probe a remote MCP server with a synthetic Streamable HTTP / SSE handshake (initialize + tools/list). HTTP 200 is not treated as healthy. Returns protocol status, discovery latency, tool-schema hash/drift, and secret-scan findings from tool descriptions.",
+  {
+    endpoint: z.string().describe("Remote MCP URL (Streamable HTTP or legacy SSE)"),
+    transport: z
+      .enum(["auto", "streamable-http", "sse"])
+      .optional()
+      .describe("Transport probe mode. auto tries Streamable HTTP then legacy SSE"),
+    baseline_hash: z.string().optional().describe("Previous canonical tools/list SHA-256 hex for drift alarms"),
+    timeout_ms: z.number().optional().describe("Per-request timeout in milliseconds"),
+  },
+  async ({ endpoint, transport, baseline_hash, timeout_ms }) => {
+    const result = await checkMcpHealth(endpoint, {
+      transport: transport || "auto",
+      baseline: baseline_hash,
+      timeoutMs: timeout_ms,
+    });
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(result, null, 2),
+        },
+      ],
+    };
+  }
+);
+
+// Tool 7: Explain Finding (AI-powered)
 server.tool(
   "explain_finding",
   "Get a detailed explanation of a specific code health finding, including why it matters, potential risks, and detailed remediation steps.",

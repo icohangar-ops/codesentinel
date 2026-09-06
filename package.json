@@ -1,8 +1,8 @@
 {
   "name": "@cubiczan/codesentinel-mcp",
-  "version": "1.0.2",
-  "description": "Codebase health as MCP tools — dead code, circular dependencies, coupling, and architectural drift for Claude Desktop, Cursor, Windsurf and Slack.",
-  "mcpName": "io.github.icohangar-ops/codesentinel-mcp",
+  "version": "1.0.0",
+  "description": "CodeSentinel — AI-powered codebase health agent for Slack",
+  "mcpName": "io.github.Cubiczan/codesentinel",
   "main": "app.js",
   "bin": {
     "codesentinel-mcp": "mcp-server/index.js"
@@ -11,11 +11,9 @@
     "start": "node app.js",
     "dev": "node --watch app.js",
     "lint": "eslint **/*.js",
+    "test": "node --test test/*.test.js",
     "mcp:start": "node mcp-server/index.js",
-    "mcpb:pack": "bash scripts/mcpb-pack.sh",
-    "mcpb:validate": "mcpb validate mcpb/manifest.json",
-    "smithery:publish": "bash scripts/smithery-publish-mcpb.sh",
-    "smithery:agent-token": "bash scripts/smithery-agent-token.sh"
+    "mcp:health": "node src/lib/mcp-health/cli.js"
   },
   "dependencies": {
     "@daytona/sdk": "^0.190.1",
@@ -37,32 +35,5 @@
   },
   "engines": {
     "node": ">=18"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/icohangar-ops/codesentinel.git"
-  },
-  "homepage": "https://github.com/icohangar-ops/codesentinel#readme",
-  "keywords": [
-    "mcp",
-    "model-context-protocol",
-    "mcp-server",
-    "code-quality",
-    "codebase-health",
-    "dead-code",
-    "circular-dependencies",
-    "coupling",
-    "architecture",
-    "static-analysis",
-    "technical-debt",
-    "claude",
-    "cursor"
-  ],
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/icohangar-ops/codesentinel/issues"
   }
 }
