@@ -1,0 +1,5 @@
+schema: spec-driven
+context: |
+  CodeSentinel is a codebase health agent (Slack + MCP tools). MCP protocol
+  health is a new capability under src/lib/mcp-health, not a rewrite of the
+  existing dead-code / coupling / drift analyzers.
