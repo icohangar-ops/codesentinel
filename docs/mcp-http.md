@@ -1,11 +1,15 @@
-# Streamable HTTP MCP (remote / Glama)
+# Streamable HTTP MCP (Vercel + Glama)
 
 CodeSentinel speaks MCP over **stdio** (local clients) and **Streamable HTTP**
 (public HTTPS). Glama remote connectors require the latter: a public HTTPS URL
 that implements `streamable-http`.
 
-This process is a durable Node HTTP server. Do **not** invent a hostname here —
-set `HOST` / `PORT` / `MCP_HTTP_HOST` from your platform.
+HTTP mode is **stateless** (`sessionIdGenerator: undefined`, new server +
+transport per POST, JSON responses by default). That matches Vercel’s
+multi-instance model — no sticky sessions.
+
+Do **not** invent a hostname. Use the platform URL (`VERCEL_PROJECT_PRODUCTION_URL`
+or your Fly/Railway host).
 
 ## Local run
 
@@ -16,13 +20,7 @@ npm run mcp:http
 # POST http://127.0.0.1:8787/mcp  Authorization: Bearer <token>
 ```
 
-Stdio is unchanged:
-
-```bash
-npm run mcp:start
-```
-
-Smoke both health and `initialize`:
+Stdio is unchanged (`npm run mcp:start`). Smoke:
 
 ```bash
 MCP_BEARER_TOKEN="replace-with-a-long-random-secret" npm run mcp:http:smoke
@@ -32,98 +30,103 @@ MCP_BEARER_TOKEN="replace-with-a-long-random-secret" npm run mcp:http:smoke
 
 | Condition | Result |
 |-----------|--------|
-| `MCP_BEARER_TOKEN` unset at process start | Process exits; nothing listens |
+| `MCP_BEARER_TOKEN` unset at process start (Node listen) | Process exits; nothing listens |
 | Missing / invalid `Authorization` on `/mcp` | HTTP 401 + `WWW-Authenticate: Bearer` |
 | Valid `Bearer` token | Streamable HTTP JSON-RPC |
 
 `/health` and `/healthz` are liveness only. They do not list tools and do not
 echo `LLM_API_KEY`, `MCP_BEARER_TOKEN`, or other secrets.
 
-## Stateless multi-replica
+## Deploy on Vercel (preferred)
 
-HTTP mode uses `StreamableHTTPServerTransport` with `sessionIdGenerator: undefined`
-and a **new server + transport per POST**. There is no in-memory `Mcp-Session-Id`
-map, so replicas behind a load balancer do not need sticky sessions.
+`vercel.json` enables **Fluid Compute** and rewrites `/mcp` + `/health` to a
+Node function (`api/index.mjs`) that uses the Web Standard `Request`/`Response`
+API — not Express `app.listen()`.
 
-`GET /mcp` and `DELETE /mcp` return 405 (no standalone SSE session). Tool calls
-are request/response. Default `enableJsonResponse=true` avoids idle SSE timeouts
-on proxies. Set `MCP_HTTP_JSON_RESPONSE=0` if you want SSE-streamed responses.
+Why this works on Vercel:
 
-If you later enable stateful sessions or `GET /mcp` SSE, pin those streams
-(sticky cookies / `Mcp-Session-Id` affinity) or share an event store.
+- Each MCP POST is an independent JSON request/response (stateless).
+- Fluid Compute streams if you ever disable JSON mode; default is JSON so
+  proxies and function isolation stay simple.
+- `GET /mcp` SSE sessions are **not** used (405). No sticky session map.
 
-## Hosting
-
-Pick a platform that runs a **long-lived Node process** and terminates TLS.
-
-### Fly.io (recommended)
+Why not a tiny Hobby isolate without Fluid: tool calls (repo scans) can exceed
+short timeouts. `maxDuration` is 60s. Raise it on Pro if scans need longer.
 
 ```bash
-fly launch --no-deploy   # creates an app name; do not hardcode a public URL in git
-fly secrets set MCP_BEARER_TOKEN="..." LLM_API_KEY="..."
-fly deploy
+npx vercel
+npx vercel env add MCP_BEARER_TOKEN      # required
+npx vercel env add LLM_API_KEY           # optional
+npx vercel env add DAYTONA_API_KEY       # optional
+npx vercel env add GITHUB_TOKEN          # optional, private clones
+npx vercel --prod
 ```
 
-`fly.toml` binds `PORT` (default 8787). Fly provides `https://<your-app>.fly.dev`.
-Use that hostname as `MCP_HTTP_HOST` in client / Glama / `server.json` remotes.
+| Env on Vercel | Required | Purpose |
+|---------------|----------|---------|
+| `MCP_BEARER_TOKEN` | yes | Shared secret; fail-closed on `/mcp` |
+| `LLM_API_KEY` | no | Server-side only; never returned |
+| `DEEPSEEK_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | no | Provider keys (server-side) |
+| `DAYTONA_API_KEY` | no | Isolated GitHub scans |
+| `GITHUB_TOKEN` | no | Private repo fetch |
+| `MCP_HTTP_PATH` | no | Default `/mcp` |
 
-Keep at least one machine running (`min_machines_running = 1`) so the first
-handshake is not a cold start. Auto-stop is OK for JSON request/response but
-hurts first-byte latency.
+Public URLs (from Vercel, not this repo):
 
-### Railway
+- MCP: `https://$VERCEL_PROJECT_PRODUCTION_URL/mcp`
+- Health: `https://$VERCEL_PROJECT_PRODUCTION_URL/health`
 
-1. New service from this repo.
-2. Start command: `node mcp-server/http.js`
-3. Railway injects `PORT`. The server binds `0.0.0.0` when `PORT` is set.
-4. Set `MCP_BEARER_TOKEN` (required) and optional `LLM_API_KEY` / `DAYTONA_API_KEY`.
-5. Public URL is whatever Railway assigns — put that host in client config.
+Disable **Deployment Protection** (Vercel Authentication) on production.
+Glama’s health check must reach `/mcp` with only your Bearer header.
 
-### Docker
+## Glama connector — exact fields
+
+After the Vercel production URL exists, Add MCP Server → **Connector**:
+
+| Field | What to enter |
+|-------|----------------|
+| Name | CodeSentinel |
+| Description | Codebase health: dead code, circular deps, coupling, drift |
+| Server URL | `https://<your-vercel-host>/mcp` |
+| Transport | `streamable-http` (not stdio, not legacy SSE) |
+| Authentication | API Key |
+| Test credential header | `Authorization` |
+| Test credential value | `Bearer <same MCP_BEARER_TOKEN as Vercel>` |
+
+Client snippet (replace the host from Vercel):
+
+```json
+{
+  "mcpServers": {
+    "codesentinel": {
+      "type": "streamable-http",
+      "url": "https://${VERCEL_PROJECT_PRODUCTION_URL}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MCP_BEARER_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+## Stateless multi-replica
+
+No in-memory `Mcp-Session-Id`. Any Vercel instance can serve `initialize`,
+`tools/list`, or `tools/call`. `GET /mcp` and `DELETE /mcp` return 405.
+
+`MCP_HTTP_JSON_RESPONSE=0` prefers SSE-streamed responses. Use that only on a
+durable Node host (Docker/Fly). Vercel stays on JSON (default).
+
+## Docker / Fly (fallback)
+
+Use these if you need long SSE streams or scans longer than the Vercel
+function budget.
 
 ```bash
 docker build -t codesentinel-mcp .
-docker run --rm -p 8787:8787 \
-  -e MCP_BEARER_TOKEN="..." \
-  -e LLM_API_KEY="..." \
-  codesentinel-mcp
+docker run --rm -p 8787:8787 -e MCP_BEARER_TOKEN="..." codesentinel-mcp
 ```
 
-Put a TLS proxy (Caddy, Fly, Railway, nginx) in front. Clients and Glama need
-**HTTPS** on the public URL.
-
-### Vercel / serverless — do not use
-
-Vercel Functions, AWS Lambda, and similar request isolates are a poor fit:
-
-- Streamable HTTP is a Node HTTP server that may stream `text/event-stream`
-- Platform timeouts and buffering break SSE and long tool calls
-- There is no durable listen socket
-
-Use Fly, Railway, or any Docker/VM host instead.
-
-## Environment
-
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `MCP_BEARER_TOKEN` | HTTP yes | Shared secret; fail-closed |
-| `MCP_HTTP_HOST` / `HOST` | no | Bind address (`127.0.0.1` local, `0.0.0.0` in containers) |
-| `MCP_HTTP_PORT` / `PORT` | no | Listen port (default `8787`) |
-| `MCP_HTTP_PATH` | no | MCP path (default `/mcp`) |
-| `MCP_HTTP_JSON_RESPONSE` | no | `1` (default) JSON bodies; `0` SSE streams |
-| `MCP_ALLOWED_HOSTS` | no | Comma-separated `Host` allowlist |
-| `MCP_HTTP_CORS_ORIGINS` | no | Comma-separated origins; default `*` for browser inspectors |
-| `LLM_API_KEY` / provider keys | no | Server-side only; never returned |
-
-## Glama connector
-
-On [Glama](https://glama.ai/mcp/faq) → Add MCP Server → **Connector**:
-
-1. Name / description for CodeSentinel.
-2. Server URL: `https://$MCP_HTTP_HOST/mcp` (your deployed HTTPS host).
-3. Transport is **streamable-http** (not stdio, not legacy SSE-only).
-4. Test credentials: API Key / Bearer matching `MCP_BEARER_TOKEN` so Glama's
-   health check can run `initialize` + `tools/list`.
-5. Auth badge: API Key (not “No Auth”). Unauthenticated `/mcp` is 401 by design.
-
-Stdio remains the npm package install for local Claude Desktop / Cursor.
+Fly: `fly launch` / `fly secrets set MCP_BEARER_TOKEN=...` then `fly deploy`.
+See `fly.toml`. Railway: start command `node mcp-server/http.js`, set `PORT`
+and `MCP_BEARER_TOKEN`.

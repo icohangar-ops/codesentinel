@@ -1,0 +1,12 @@
+.git
+.env
+.env.local
+*.mp4
+*.png
+video/
+docs/sandbox-setup
+coverage
+test
+openspec
+scripts
+fly.toml

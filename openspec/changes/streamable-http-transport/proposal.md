@@ -18,9 +18,10 @@ listed as a hosted connector even though the tools already exist.
 - Fail-closed Bearer auth (`MCP_BEARER_TOKEN`). Missing or invalid credentials
   return HTTP 401. Tools are never exposed on a public URL without auth.
 - Keep `LLM_API_KEY` and other secrets in server-side env only; never echo them.
-- Document local HTTP run, remote client config (`url` + `Authorization`),
-  Glama connector notes, and Fly/Railway/Docker hosting. Do not invent a public
-  hostname — URL/host stay env/template variables.
+- Document local HTTP run, Vercel Fluid Compute deploy, remote client config
+  (`url` + `Authorization`), Glama connector field values, and Docker/Fly
+  fallback. Do not invent a public hostname — URL/host stay env/template
+  variables (`VERCEL_PROJECT_PRODUCTION_URL`, `{MCP_HTTP_HOST}`).
 - Tests + a smoke script for `/health` and `initialize`.
 
 ## Impact

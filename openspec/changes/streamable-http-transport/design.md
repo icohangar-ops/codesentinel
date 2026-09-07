@@ -32,9 +32,13 @@ prefer SSE streams. Both are valid Streamable HTTP.
 
 ## Hosting
 
-Vercel serverless is a poor fit (function timeouts, no durable Node HTTP,
-SSE/streaming quirks). Ship a Dockerfile and Fly/Railway notes. Platforms
-terminate TLS; the process binds `HOST`/`PORT` from env.
+**Vercel Fluid Compute** is the preferred public HTTPS path. A Web Standard
+`fetch` handler (`api/index.mjs`) shares `handleWebRequest` with the Node
+listen process. Stateless JSON POSTs do not need sticky sessions. `maxDuration`
+is 60s.
+
+Docker / Fly remain a fallback for long SSE streams or scans that exceed the
+function budget. Platforms terminate TLS; bind host/port stay env-only.
 
 ## server.json
 

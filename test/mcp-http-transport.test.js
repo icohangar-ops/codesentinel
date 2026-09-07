@@ -6,6 +6,7 @@ const { checkMcpHealth } = require("../src/lib/mcp-health");
 const { EXPECTED_TOOL_NAMES } = require("../mcp-server/create-server");
 const { requireConfiguredToken, tokensEqual } = require("../mcp-server/auth");
 const { startHttpServer } = require("../mcp-server/http");
+const { handleWebRequest } = require("../mcp-server/web-handler");
 
 const TOKEN = "test-bearer-token-ok";
 const SECRET = "sk-test-should-never-appear-in-http-bodies";
@@ -156,6 +157,54 @@ describe("Streamable HTTP MCP server", () => {
     assert.equal(response.ok, true);
     assert.doesNotMatch(text, new RegExp(SECRET));
     assert.match(text, /dead_code|maintenance burden/i);
+  });
+});
+
+describe("Web-standard handler (Vercel Fluid Compute shape)", () => {
+  it("serves health and rejects unauthenticated initialize without Node listen", async () => {
+    const health = await handleWebRequest(new Request("http://127.0.0.1/health"), {
+      bearerToken: TOKEN,
+    });
+    assert.equal(health.status, 200);
+    const healthBody = await health.json();
+    assert.equal(healthBody.transport, "streamable-http");
+    assert.equal(healthBody.mode, "stateless");
+
+    const unauth = await handleWebRequest(
+      new Request("http://127.0.0.1/mcp", {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "0" } },
+        }),
+      }),
+      { bearerToken: TOKEN }
+    );
+    assert.equal(unauth.status, 401);
+
+    const init = await handleWebRequest(
+      new Request("http://127.0.0.1/mcp", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          authorization: `Bearer ${TOKEN}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "0" } },
+        }),
+      }),
+      { bearerToken: TOKEN, jsonResponse: true }
+    );
+    assert.equal(init.status, 200);
+    const initBody = await init.json();
+    assert.equal(initBody.result.serverInfo.name, "CodeSentinel");
   });
 });
 

@@ -85,7 +85,38 @@ Local default: `http://127.0.0.1:8787/mcp` (health: `GET /health`). Production m
 
 Cursor / Claude remote connectors use the same `url` + `Authorization` header. Unauthenticated `/mcp` returns **HTTP 401**. `LLM_API_KEY` and other provider keys stay on the server and are never echoed.
 
-Glama: Add MCP Server → **Connector** → HTTPS URL speaking `streamable-http` → test credential = the same Bearer token. See [`docs/mcp-http.md`](docs/mcp-http.md) for Fly/Railway/Docker (not Vercel).
+### Deploy on Vercel (public HTTPS)
+
+Stateless Streamable HTTP (JSON request/response) runs on **Vercel Fluid Compute**. No sticky sessions. Do not invent a hostname — use the URL Vercel assigns.
+
+```bash
+npx vercel          # preview
+npx vercel env add MCP_BEARER_TOKEN
+npx vercel env add LLM_API_KEY          # optional
+# optional: DAYTONA_API_KEY, GITHUB_TOKEN
+npx vercel --prod
+```
+
+After deploy, the MCP endpoint is:
+
+`https://$VERCEL_PROJECT_PRODUCTION_URL/mcp`
+
+(`VERCEL_URL` for a specific deployment). Health: `https://$VERCEL_PROJECT_PRODUCTION_URL/health`.
+
+Turn **off** Vercel Deployment Protection on the production host, or Glama/clients cannot complete `initialize`.
+
+### Glama connector fields (fill after the Vercel URL exists)
+
+| Field | Value |
+|-------|--------|
+| Type | Connector (remote MCP) |
+| Server URL | `https://$VERCEL_PROJECT_PRODUCTION_URL/mcp` |
+| Transport | `streamable-http` |
+| Auth | API Key / Bearer |
+| Header | `Authorization` |
+| Header value | `Bearer $MCP_BEARER_TOKEN` (same secret as the Vercel env) |
+
+See [`docs/mcp-http.md`](docs/mcp-http.md) for Vercel env vars, Fluid Compute notes, and Docker/Fly fallback.
 
 ---
 
