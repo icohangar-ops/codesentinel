@@ -87,11 +87,11 @@ After the Vercel production URL exists, Add MCP Server → **Connector**:
 |-------|----------------|
 | Name | CodeSentinel |
 | Description | Codebase health: dead code, circular deps, coupling, drift |
-| Server URL | `https://<your-vercel-host>/mcp` |
+| Server URL | `https://$VERCEL_PROJECT_PRODUCTION_URL/mcp` |
 | Transport | `streamable-http` (not stdio, not legacy SSE) |
 | Authentication | API Key |
-| Test credential header | `Authorization` |
-| Test credential value | `Bearer <same MCP_BEARER_TOKEN as Vercel>` |
+| Header name | `Authorization` |
+| Header value | `Bearer $MCP_BEARER_TOKEN` (same secret as the Vercel env) |
 
 Client snippet (replace the host from Vercel):
 
