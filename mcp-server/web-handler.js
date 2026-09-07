@@ -103,25 +103,10 @@ async function handleWebRequest(request, options = {}) {
     return respond(new Response(null, { status: 204 }));
   }
 
-  // Fail closed like http.js listen: MCP_BEARER_TOKEN must be configured
-  // before the deployment is considered healthy. /health stays unauthenticated
-  // once configured; misconfigured cold starts must not report 200.
+  // Liveness: /health|/healthz always return 200 with healthPayload(), even when
+  // MCP_BEARER_TOKEN is unset. Fail-closed auth belongs on /mcp (401), not here.
+  // (Node http.js listen still exits if the token is unset — unchanged.)
   if (pathname === "/health" || pathname === "/healthz") {
-    try {
-      if (options.bearerToken == null) {
-        requireConfiguredToken(env);
-      }
-    } catch {
-      return respond(
-        Response.json(
-          {
-            ok: false,
-            error: "MCP_BEARER_TOKEN is required (fail-closed). Set the Vercel env secret before serving traffic.",
-          },
-          { status: 503 }
-        )
-      );
-    }
     return respond(Response.json(healthPayload()));
   }
 
