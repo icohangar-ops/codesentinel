@@ -1,21 +1,26 @@
 /**
  * Probe the Vercel Fluid Compute entry the way Vercel Node does:
- * ESM handler, require(esm) disabled, MCP_BEARER_TOKEN unset.
+ * ESM handler, require(esm) disabled, MCP_BEARER_TOKEN unset then set.
  *
- * Exits 0 only if GET /health is 200 and POST /mcp is fail-closed 401.
+ * Fail-closed: GET /health must NOT be 200 when the token is unset (503).
+ * POST /mcp stays 401 without a Bearer. With token configured, health is 200
+ * and authenticated initialize succeeds. Also asserts no ERR_REQUIRE_ESM.
  */
 
 async function main() {
   delete process.env.MCP_BEARER_TOKEN;
   const { default: handler } = await import("../../api/index.mjs");
 
-  const health = await handler.fetch(new Request("http://127.0.0.1/health"));
-  if (health.status !== 200) {
-    throw new Error(`GET /health expected 200, got ${health.status}`);
+  const healthUnset = await handler.fetch(new Request("http://127.0.0.1/health"));
+  if (healthUnset.status === 200) {
+    throw new Error("GET /health must not return 200 when MCP_BEARER_TOKEN is unset (fail-closed)");
   }
-  const healthBody = await health.json();
-  if (!healthBody.ok || healthBody.transport !== "streamable-http") {
-    throw new Error(`unexpected health payload: ${JSON.stringify(healthBody)}`);
+  if (healthUnset.status !== 503) {
+    throw new Error(`GET /health expected 503 when token unset, got ${healthUnset.status}`);
+  }
+  const healthUnsetBody = await healthUnset.json();
+  if (healthUnsetBody.ok !== false) {
+    throw new Error(`unexpected health payload when unset: ${JSON.stringify(healthUnsetBody)}`);
   }
 
   const mcp = await handler.fetch(
@@ -36,6 +41,16 @@ async function main() {
 
   const token = "probe-bearer-token-ok";
   process.env.MCP_BEARER_TOKEN = token;
+
+  const healthSet = await handler.fetch(new Request("http://127.0.0.1/health"));
+  if (healthSet.status !== 200) {
+    throw new Error(`GET /health expected 200 when token set, got ${healthSet.status}`);
+  }
+  const healthBody = await healthSet.json();
+  if (!healthBody.ok || healthBody.transport !== "streamable-http") {
+    throw new Error(`unexpected health payload: ${JSON.stringify(healthBody)}`);
+  }
+
   const init = await handler.fetch(
     new Request("http://127.0.0.1/mcp", {
       method: "POST",

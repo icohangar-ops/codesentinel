@@ -93,12 +93,12 @@ Stateless Streamable HTTP (JSON request/response) runs on **Vercel Fluid Compute
 
 ```bash
 npx vercel          # preview
-npx vercel env add MCP_BEARER_TOKEN     # required for /mcp — fail-closed Bearer auth
+npx vercel env add MCP_BEARER_TOKEN     # required — fail-closed (health 503 + /mcp 401 if unset)
 npx vercel env add LLM_API_KEY          # optional, server-side only
 npx vercel env add DAYTONA_API_KEY      # optional, isolated GitHub scans
 npx vercel env add GITHUB_TOKEN         # optional, private repo fetch
 npx vercel --prod
-# GET /health must be 200 even if MCP_BEARER_TOKEN is not set yet.
+# MCP_BEARER_TOKEN required — GET /health returns 503 if unset (fail-closed).
 ```
 
 Live MCP endpoint:
