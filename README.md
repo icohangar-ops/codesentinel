@@ -43,9 +43,9 @@ Dead code, circular dependencies, excessive coupling, and architectural drift ar
 | **Claude Desktop** | Add to `claude_desktop_config.json` |
 | **Cursor / Windsurf** | Add to MCP settings |
 | **Slack** | Built-in Agent Builder integration with Block Kit UI |
-| **Any MCP client** | Standard MCP server (stdio) |
+| **Any MCP client** | Standard MCP server (stdio) or remote Streamable HTTP |
 
-### Claude Desktop Config
+### Claude Desktop Config (stdio)
 
 ```json
 {
@@ -58,17 +58,86 @@ Dead code, circular dependencies, excessive coupling, and architectural drift ar
 }
 ```
 
+### Remote Streamable HTTP (Glama / hosted)
+
+Public HTTPS + `streamable-http` is required to list CodeSentinel as a [Glama remote connector](https://glama.ai/mcp/faq). Replace the host from your deploy env — do not commit a fake hostname.
+
+```bash
+export MCP_BEARER_TOKEN="replace-with-a-long-random-secret"
+npm run mcp:http
+```
+
+Local default: `http://127.0.0.1:8787/mcp` (health: `GET /health`). Production must be **HTTPS**.
+
+```json
+{
+  "mcpServers": {
+    "codesentinel": {
+      "type": "streamable-http",
+      "url": "https://${MCP_HTTP_HOST}/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MCP_BEARER_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Cursor / Claude remote connectors use the same `url` + `Authorization` header. Unauthenticated `/mcp` returns **HTTP 401**. `LLM_API_KEY` and other provider keys stay on the server and are never echoed.
+
+### Deploy on Vercel (public HTTPS)
+
+Stateless Streamable HTTP (JSON request/response) runs on **Vercel Fluid Compute**. No sticky sessions. Do not invent a hostname — use the URL Vercel assigns.
+
+```bash
+npx vercel          # preview
+npx vercel env add MCP_BEARER_TOKEN     # required — fail-closed Bearer auth
+npx vercel env add LLM_API_KEY          # optional, server-side only
+npx vercel env add DAYTONA_API_KEY      # optional, isolated GitHub scans
+npx vercel env add GITHUB_TOKEN         # optional, private repo fetch
+npx vercel --prod
+```
+
+After deploy, the MCP endpoint is:
+
+`https://$VERCEL_PROJECT_PRODUCTION_URL/mcp`
+
+(`VERCEL_URL` for a specific deployment). Health: `https://$VERCEL_PROJECT_PRODUCTION_URL/health`.
+
+Turn **off** Vercel Deployment Protection on the production host, or Glama/clients cannot complete `initialize`.
+
+### Glama connector fields (fill after the Vercel URL exists)
+
+| Field | Value |
+|-------|--------|
+| Type | Connector (remote MCP) |
+| Server URL | `https://$VERCEL_PROJECT_PRODUCTION_URL/mcp` |
+| Transport | `streamable-http` |
+| Auth | API Key / Bearer |
+| Header | `Authorization` |
+| Header value | `Bearer $MCP_BEARER_TOKEN` (same secret as the Vercel env) |
+
+See [`docs/mcp-http.md`](docs/mcp-http.md) for Vercel env vars, Fluid Compute notes, and Docker/Fly fallback.
+
 ---
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/icohangar-ops/codehealth-mcp.git
-cd codehealth-mcp
+git clone https://github.com/Cubiczan/codesentinel.git
+cd codesentinel
 npm install
 cp .env.sample .env
-# Edit .env with your LLM API key
+# Edit .env with your LLM API key (and MCP_BEARER_TOKEN for HTTP mode)
 npm start
+```
+
+HTTP MCP (same tools, Bearer auth):
+
+```bash
+export MCP_BEARER_TOKEN="replace-with-a-long-random-secret"
+npm run mcp:http
+npm run mcp:http:smoke
 ```
 
 ### Use in Claude Desktop
@@ -131,7 +200,7 @@ Add the Slack app manifest, enable Agent Builder, and @CodeHealth in any channel
 │          MCP CLIENT (any)                │
 │  Claude Desktop, Cursor, Slack, etc.     │
 └──────────────────┬───────────────────────┘
-                   │ MCP Protocol (stdio)
+                   │ MCP Protocol (stdio or Streamable HTTP)
 ┌──────────────────▼───────────────────────┐
 │         CODEHEALTH MCP SERVER            │
 │                                          │
@@ -241,9 +310,12 @@ codehealth-mcp/
 │   ├── resilience/           # safeFetch / retry
 │   └── mcp-health/           # handshake, silent probe, Streamable reason codes, CLI
 ├── mcp-server/
-│   ├── index.js              # MCP server (code analyzers + check_mcp_health)
+│   ├── index.js              # MCP stdio entry (unchanged tools)
+│   ├── http.js               # Streamable HTTP (stateless, Bearer auth)
+│   ├── create-server.js      # Shared tool registration
 │   └── package.json
-├── test/                     # handshake / silent-probe / streamable-diag / drift / secrets
+├── docs/mcp-http.md          # Remote / Glama / Fly / Railway / Vercel notes
+├── test/                     # handshake / silent-probe / streamable-diag / HTTP transport / secrets
 └── functions/                # Slack function definitions
 ```
 
@@ -255,6 +327,7 @@ CodeHealth MCP is listed in the following directories:
 
 - **[awesome-mcp-servers](https://github.com/appcypher/awesome-mcp-servers)** – A curated list of MCP servers.
 - **[MCP Registry](https://github.com/modelcontextprotocol/registry)** – Official registry for Model Context Protocol servers.
+- **[Glama](https://glama.ai/mcp/faq)** – Remote connectors must be public HTTPS speaking `streamable-http` (see [`docs/mcp-http.md`](docs/mcp-http.md)).
 
 ---
 

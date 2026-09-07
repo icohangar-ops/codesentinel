@@ -1,0 +1,30 @@
+# Fly.io template for the Streamable HTTP MCP process.
+# Run `fly launch` / `fly apps create` to set the app name. Do not commit a
+# public hostname — clients use the platform-assigned HTTPS URL.
+
+primary_region = "iad"
+
+[build]
+
+[env]
+  NODE_ENV = "production"
+  MCP_HTTP_HOST = "0.0.0.0"
+  PORT = "8787"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

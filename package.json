@@ -5,7 +5,8 @@
   "mcpName": "io.github.Cubiczan/codesentinel",
   "main": "app.js",
   "bin": {
-    "codesentinel-mcp": "mcp-server/index.js"
+    "codesentinel-mcp": "mcp-server/index.js",
+    "codesentinel-mcp-http": "mcp-server/http.js"
   },
   "scripts": {
     "start": "node app.js",
@@ -13,6 +14,8 @@
     "lint": "eslint **/*.js",
     "test": "node --test test/*.test.js",
     "mcp:start": "node mcp-server/index.js",
+    "mcp:http": "node mcp-server/http.js",
+    "mcp:http:smoke": "node scripts/mcp-http-smoke.js",
     "mcp:health": "node src/lib/mcp-health/cli.js"
   },
   "dependencies": {

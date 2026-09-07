@@ -12,5 +12,26 @@
         "type": "stdio"
       }
     }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{MCP_HTTP_HOST}/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer token matching the server MCP_BEARER_TOKEN. Send as: Bearer <token>",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ],
+      "variables": {
+        "MCP_HTTP_HOST": {
+          "description": "Public hostname of your deployed Streamable HTTP server (no scheme or path). Set from your host's URL, e.g. the Fly/Railway hostname.",
+          "isRequired": true,
+          "placeholder": "your-app.fly.dev"
+        }
+      }
+    }
   ]
 }
