@@ -91,9 +91,10 @@ Stateless Streamable HTTP (JSON request/response) runs on **Vercel Fluid Compute
 
 ```bash
 npx vercel          # preview
-npx vercel env add MCP_BEARER_TOKEN
-npx vercel env add LLM_API_KEY          # optional
-# optional: DAYTONA_API_KEY, GITHUB_TOKEN
+npx vercel env add MCP_BEARER_TOKEN     # required — fail-closed Bearer auth
+npx vercel env add LLM_API_KEY          # optional, server-side only
+npx vercel env add DAYTONA_API_KEY      # optional, isolated GitHub scans
+npx vercel env add GITHUB_TOKEN         # optional, private repo fetch
 npx vercel --prod
 ```
 
