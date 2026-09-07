@@ -1,0 +1,364 @@
+/**
+ * Shared MCP server factory. Stdio and Streamable HTTP both call this so
+ * the tool set stays identical across transports.
+ */
+
+const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
+const { z } = require("zod");
+
+const { detectDeadCode } = require("../lib/analyzers/dead-code");
+const { detectCircularDeps } = require("../lib/analyzers/circular-deps");
+const { analyzeCoupling } = require("../lib/analyzers/coupling");
+const { detectDrift } = require("../lib/analyzers/drift");
+const { resolveRepo } = require("../lib/mcp-repo");
+const { checkMcpHealth } = require("../src/lib/mcp-health");
+
+const SERVER_INFO = {
+  name: "CodeSentinel",
+  version: "1.0.0",
+  description: "AI-powered codebase health analysis — dead code, circular deps, coupling, architectural drift",
+};
+
+function createMcpServer() {
+  const server = new McpServer(SERVER_INFO);
+
+  server.tool(
+    "analyze_dead_code",
+    "Analyze a codebase for dead code — functions, classes, and modules that are defined but never referenced. Returns findings with file paths, line numbers, severity, and fix suggestions.",
+    {
+      repo_path: z.string().optional().describe("Path or URL to the repository to analyze"),
+      include_suggestions: z.boolean().default(true).describe("Whether to include fix suggestions"),
+    },
+    async ({ repo_path, include_suggestions }) => {
+      const repoInfo = await resolveRepo(repo_path);
+      const results = detectDeadCode(repoInfo);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                type: results.type,
+                findings: include_suggestions
+                  ? results.findings
+                  : results.findings.map(({ suggestion, ...rest }) => rest),
+                stats: results.stats,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "detect_circular_deps",
+    "Detect circular dependencies between modules using DFS-based cycle detection. Returns cycles with involved files and impact assessment.",
+    {
+      repo_path: z.string().optional().describe("Path or URL to the repository"),
+    },
+    async ({ repo_path }) => {
+      const repoInfo = await resolveRepo(repo_path);
+      const results = detectCircularDeps(repoInfo);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                type: results.type,
+                findings: results.findings,
+                stats: results.stats,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "analyze_coupling",
+    "Analyze coupling metrics across the codebase. Identifies modules with high fan-out (too many dependencies) and tightly coupled clusters.",
+    {
+      repo_path: z.string().optional().describe("Path or URL to the repository"),
+      fan_out_threshold: z.number().default(10).describe("Fan-out threshold for flagging modules"),
+    },
+    async ({ repo_path, fan_out_threshold }) => {
+      const repoInfo = await resolveRepo(repo_path);
+      const results = analyzeCoupling(repoInfo);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                type: results.type,
+                findings: results.findings,
+                stats: { ...results.stats, configuredThreshold: fan_out_threshold },
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "detect_architectural_drift",
+    "Detect architectural drift — violations of intended layer boundaries (e.g., UI importing from data layer, reverse dependencies).",
+    {
+      repo_path: z.string().optional().describe("Path or URL to the repository"),
+      layers_config: z
+        .string()
+        .optional()
+        .describe('JSON string defining layer patterns, e.g. {"ui": ["src/components/"], "data": ["src/db/"]}'),
+    },
+    async ({ repo_path, layers_config }) => {
+      const repoInfo = await resolveRepo(repo_path);
+      const results = detectDrift(repoInfo);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                type: results.type,
+                findings: results.findings,
+                stats: results.stats,
+                layers_config: layers_config ? JSON.parse(layers_config) : "default (ui, business, data, shared)",
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "full_health_scan",
+    "Run a complete codebase health scan: dead code, circular dependencies, coupling metrics, and architectural drift. Returns an overall health score (0-100) and prioritized findings.",
+    {
+      repo_path: z.string().optional().describe("Path or URL to the repository"),
+    },
+    async ({ repo_path }) => {
+      const repoInfo = await resolveRepo(repo_path);
+      const [deadCode, circularDeps, coupling, drift] = await Promise.all([
+        Promise.resolve(detectDeadCode(repoInfo)),
+        Promise.resolve(detectCircularDeps(repoInfo)),
+        Promise.resolve(analyzeCoupling(repoInfo)),
+        Promise.resolve(detectDrift(repoInfo)),
+      ]);
+
+      const deadCodePenalty = Math.min(deadCode.findings.length * 2, 30);
+      const cyclesPenalty = Math.min(circularDeps.findings.length * 5, 25);
+      const couplingPenalty = Math.min(
+        coupling.findings.filter((f) => f.severity === "critical").length * 3,
+        25
+      );
+      const driftPenalty = Math.min(drift.findings.length * 4, 20);
+      const healthScore = Math.max(0, 100 - deadCodePenalty - cyclesPenalty - couplingPenalty - driftPenalty);
+
+      const allFindings = [...deadCode.findings, ...circularDeps.findings, ...coupling.findings, ...drift.findings];
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                type: "full",
+                healthScore,
+                healthGrade:
+                  healthScore >= 80 ? "A" : healthScore >= 60 ? "B" : healthScore >= 40 ? "C" : "D",
+                categories: {
+                  deadCode: { count: deadCode.findings.length, critical: deadCode.findings.filter((f) => f.severity === "critical").length },
+                  circularDeps: { count: circularDeps.findings.length, critical: circularDeps.findings.filter((f) => f.severity === "critical").length },
+                  coupling: { count: coupling.findings.filter((f) => f.type === "high_fan_out").length, critical: coupling.findings.filter((f) => f.severity === "critical").length },
+                  drift: { count: drift.findings.length, critical: drift.findings.filter((f) => f.severity === "critical").length },
+                },
+                summary: {
+                  totalFindings: allFindings.length,
+                  criticalCount: allFindings.filter((f) => f.severity === "critical").length,
+                  warningCount: allFindings.filter((f) => f.severity === "warning").length,
+                  infoCount: allFindings.filter((f) => f.severity === "info").length,
+                },
+                topPriorities: allFindings
+                  .filter((f) => f.suggestion)
+                  .sort((a, b) => {
+                    const severityOrder = { critical: 0, warning: 1, info: 2 };
+                    return (severityOrder[a.severity] || 2) - (severityOrder[b.severity] || 2);
+                  })
+                  .slice(0, 5)
+                  .map((f) => ({
+                    severity: f.severity,
+                    issue: f.description || f.reason || f.name,
+                    fix: f.suggestion,
+                  })),
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "check_mcp_health",
+    "Probe a remote MCP server: Streamable HTTP / SSE handshake (initialize + tools/list), a known-bad tools/call error-shape probe, and a Streamable HTTP diagnostic matrix (WRONG_METHOD, WRONG_ACCEPT, MISSING_SESSION, GET_VS_POST, SESSION_STICKY_MISMATCH). HTTP 200 is not treated as healthy.",
+    {
+      endpoint: z.string().describe("Remote MCP URL (Streamable HTTP or legacy SSE)"),
+      transport: z
+        .enum(["auto", "streamable-http", "sse"])
+        .optional()
+        .describe("Transport probe mode. auto tries Streamable HTTP then legacy SSE"),
+      baseline_hash: z.string().optional().describe("Previous canonical tools/list SHA-256 hex for drift alarms"),
+      timeout_ms: z.number().optional().describe("Per-request timeout in milliseconds"),
+      include_probes: z
+        .boolean()
+        .optional()
+        .describe("Run silent-exception + Streamable HTTP diagnostics (default true)"),
+    },
+    async ({ endpoint, transport, baseline_hash, timeout_ms, include_probes }) => {
+      const result = await checkMcpHealth(endpoint, {
+        transport: transport || "auto",
+        baseline: baseline_hash,
+        timeoutMs: timeout_ms,
+        probes: include_probes !== false,
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  server.tool(
+    "explain_finding",
+    "Get a detailed explanation of a specific code health finding, including why it matters, potential risks, and detailed remediation steps.",
+    {
+      finding_type: z.enum(["dead_code", "circular_dependency", "high_coupling", "architectural_drift"]),
+      finding_description: z.string().describe("Description of the specific finding to explain"),
+      codebase_context: z.string().optional().describe("Additional context about the codebase (language, framework, etc.)"),
+    },
+    async ({ finding_type, finding_description, codebase_context }) => {
+      const explanation = generateExplanation(finding_type, finding_description, codebase_context);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ type: finding_type, explanation }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  return server;
+}
+
+function generateExplanation(type, description, context) {
+  const explanations = {
+    dead_code: {
+      why: "Dead code increases the maintenance burden by making the codebase harder to understand and navigate. It also inflates bundle sizes and can confuse new team members about which code paths are actually in use.",
+      risks: [
+        "Developers may waste time debugging or testing dead code paths",
+        "Dead code can mask bugs by making code coverage metrics misleading",
+        "Increases cognitive load during code reviews",
+        "In compiled languages, dead code may still be compiled, increasing binary size",
+      ],
+      remediation: [
+        "Verify the code is truly unreferenced using static analysis (not just grep)",
+        "Check for any dynamic imports or reflection-based usage",
+        "Remove incrementally with focused PRs per module area",
+        "Run full test suite after each removal to catch any missed references",
+      ],
+    },
+    circular_dependency: {
+      why: "Circular dependencies create tightly coupled modules that cannot be tested, reused, or understood in isolation. They can cause initialization order bugs, prevent tree-shaking, and make refactoring extremely risky.",
+      risks: [
+        "Runtime errors due to undefined exports during module initialization",
+        "Inability to unit test modules independently",
+        "Tree-shaking failures in bundlers (dead code can't be eliminated)",
+        "Difficulty in understanding the dependency graph",
+        "Potential infinite recursion in lazy-loaded modules",
+      ],
+      remediation: [
+        "Identify the shared dependency and extract it to a third module",
+        "Use dependency injection to break the cycle at runtime",
+        "Apply the mediator pattern to decouple direct references",
+        "Restructure using events/pub-sub instead of direct imports",
+      ],
+    },
+    high_coupling: {
+      why: "High coupling means a module depends on many other modules. Changes to any of those dependencies can break the coupled module, making the system fragile and expensive to maintain.",
+      risks: [
+        "A single change can cascade across many modules",
+        "Difficult to understand the full impact of changes",
+        "Testing requires complex setup with many mocks/stubs",
+        "Reusability is severely limited",
+        "Merge conflicts increase with the number of dependencies",
+      ],
+      remediation: [
+        "Apply the Facade pattern to group related dependencies",
+        "Use dependency inversion (depend on abstractions, not concretions)",
+        "Extract cohesive sub-modules with well-defined interfaces",
+        "Consider event-driven architecture for cross-cutting concerns",
+      ],
+    },
+    architectural_drift: {
+      why: "Architectural drift occurs when the actual code structure diverges from the intended architecture over time. This makes the system harder to reason about, test, and evolve.",
+      risks: [
+        "Loss of architectural benefits (testability, maintainability, deployability)",
+        "Creates hidden dependencies that are hard to discover",
+        "Makes onboarding new developers more difficult",
+        "Can lead to security issues (e.g., UI layer directly accessing databases)",
+        "Increases the cost of future refactoring",
+      ],
+      remediation: [
+        "Add architectural linting rules (e.g., eslint-plugin-boundaries)",
+        "Document the intended architecture and make it visible to the team",
+        "Create migration plan to gradually move violating imports",
+        "Use dependency injection to enforce layer boundaries at compile time",
+      ],
+    },
+  };
+
+  const info = explanations[type] || explanations.dead_code;
+  return {
+    finding: description,
+    context: context || "general codebase",
+    ...info,
+  };
+}
+
+const EXPECTED_TOOL_NAMES = [
+  "analyze_dead_code",
+  "detect_circular_deps",
+  "analyze_coupling",
+  "detect_architectural_drift",
+  "full_health_scan",
+  "check_mcp_health",
+  "explain_finding",
+];
+
+module.exports = {
+  SERVER_INFO,
+  EXPECTED_TOOL_NAMES,
+  createMcpServer,
+  generateExplanation,
+};

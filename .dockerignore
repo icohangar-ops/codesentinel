@@ -1,0 +1,13 @@
+node_modules
+mcp-server/node_modules
+.git
+.env
+.env.local
+*.mp4
+*.png
+video/
+docs/sandbox-setup
+coverage
+openspec
+test
+scripts
