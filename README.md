@@ -60,23 +60,21 @@ Dead code, circular dependencies, excessive coupling, and architectural drift ar
 
 ### Remote Streamable HTTP (Glama / hosted)
 
-Public HTTPS + `streamable-http` is required to list CodeSentinel as a [Glama remote connector](https://glama.ai/mcp/faq).
-
-**Live production:** MCP `https://codesentinel-rho.vercel.app/mcp` · health `https://codesentinel-rho.vercel.app/health`. Auth uses env `MCP_BEARER_TOKEN` (Bearer) — never commit the secret.
+Public HTTPS + `streamable-http` is required to list CodeSentinel as a [Glama remote connector](https://glama.ai/mcp/faq). Replace the host from your deploy env — do not commit a fake hostname. The live production host is on the GitHub repository **Website** field and the Vercel dashboard; never hardcode it in docs or `server.json`.
 
 ```bash
 export MCP_BEARER_TOKEN="replace-with-a-long-random-secret"
 npm run mcp:http
 ```
 
-Local default: `http://127.0.0.1:8787/mcp` (health: `GET /health`). Production is **HTTPS**.
+Local default: `http://127.0.0.1:8787/mcp` (health: `GET /health`). Production must be **HTTPS**.
 
 ```json
 {
   "mcpServers": {
     "codesentinel": {
       "type": "streamable-http",
-      "url": "https://codesentinel-rho.vercel.app/mcp",
+      "url": "https://${MCP_HTTP_HOST}/mcp",
       "headers": {
         "Authorization": "Bearer ${MCP_BEARER_TOKEN}"
       }
@@ -89,7 +87,7 @@ Cursor / Claude remote connectors use the same `url` + `Authorization` header. U
 
 ### Deploy on Vercel (public HTTPS)
 
-Stateless Streamable HTTP (JSON request/response) runs on **Vercel Fluid Compute**. No sticky sessions. Production host: **`codesentinel-rho.vercel.app`**.
+Stateless Streamable HTTP (JSON request/response) runs on **Vercel Fluid Compute**. No sticky sessions. Do not invent a hostname — use `$VERCEL_PROJECT_PRODUCTION_URL` (or the host shown in the Vercel dashboard / GitHub Website field).
 
 ```bash
 npx vercel          # preview
@@ -101,24 +99,24 @@ npx vercel --prod
 # GET /health must be 200 even if MCP_BEARER_TOKEN is not set yet.
 ```
 
-Live MCP endpoint:
+After deploy, the MCP endpoint is:
 
-`https://codesentinel-rho.vercel.app/mcp`
+`https://$VERCEL_PROJECT_PRODUCTION_URL/mcp`
 
-Health: `https://codesentinel-rho.vercel.app/health`.
+(`VERCEL_URL` for a specific deployment). Health: `https://$VERCEL_PROJECT_PRODUCTION_URL/health`.
 
 Turn **off** Vercel Deployment Protection on the production host, or Glama/clients cannot complete `initialize`.
 
-### Glama connector fields (live production)
+### Glama connector fields (fill after the Vercel URL exists)
 
 | Field | Value |
 |-------|--------|
 | Type | Connector (remote MCP) |
-| Server URL | `https://codesentinel-rho.vercel.app/mcp` |
+| Server URL | `https://$VERCEL_PROJECT_PRODUCTION_URL/mcp` |
 | Transport | `streamable-http` |
 | Auth | API Key / Bearer |
 | Header | `Authorization` |
-| Header value | `Bearer $MCP_BEARER_TOKEN` (same secret as the Vercel env — never commit) |
+| Header value | `Bearer $MCP_BEARER_TOKEN` (same secret as the Vercel env) |
 
 See [`docs/mcp-http.md`](docs/mcp-http.md) for Vercel env vars, Fluid Compute notes, and Docker/Fly fallback.
 
