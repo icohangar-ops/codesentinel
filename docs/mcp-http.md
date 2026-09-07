@@ -32,19 +32,22 @@ MCP_BEARER_TOKEN="replace-with-a-long-random-secret" npm run mcp:http:smoke
 | Condition | Result |
 |-----------|--------|
 | `MCP_BEARER_TOKEN` unset at process start (Node listen) | Process exits; nothing listens |
+| `MCP_BEARER_TOKEN` unset on Vercel (web-handler) | `GET /health` → **503**; `/mcp` → **401** |
 | Missing / invalid `Authorization` on `/mcp` | HTTP 401 + `WWW-Authenticate: Bearer` |
 | Valid `Bearer` token | Streamable HTTP JSON-RPC |
 
-`/health` and `/healthz` are liveness only. They do not list tools and do not
-echo `LLM_API_KEY`, `MCP_BEARER_TOKEN`, or other secrets.
+`/health` and `/healthz` are liveness only once the token is configured. They do
+not list tools and do not echo `LLM_API_KEY`, `MCP_BEARER_TOKEN`, or other secrets.
+Misconfigured deployments must not report healthy (no HTTP 200 on `/health`).
 
 ## Deploy on Vercel (preferred)
 
 `vercel.json` enables **Fluid Compute** and rewrites `/mcp` + `/health` to a
 Node function (`api/index.mjs`) that uses the Web Standard `Request`/`Response`
-API — not Express `app.listen()`. `GET /health` is unauthenticated liveness and
-must return 200 even when `MCP_BEARER_TOKEN` is unset. `/mcp` stays fail-closed
-(401) if the token is missing or invalid.
+API — not Express `app.listen()`. Fail-closed like Node listen: `MCP_BEARER_TOKEN`
+must be set in the Vercel env. `GET /health` is unauthenticated once configured,
+but returns **503** (not 200) when the token is unset. `/mcp` returns **401** if
+the token is missing or the Bearer header is invalid.
 
 Why this works on Vercel:
 
@@ -67,7 +70,7 @@ npx vercel --prod
 
 | Env on Vercel | Required | Purpose |
 |---------------|----------|---------|
-| `MCP_BEARER_TOKEN` | yes | Shared secret; fail-closed on `/mcp` |
+| `MCP_BEARER_TOKEN` | yes | Shared secret; fail-closed (`/health` 503 + `/mcp` 401 if unset) |
 | `LLM_API_KEY` | no | Server-side only; never returned |
 | `DEEPSEEK_API_KEY` / `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | no | Provider keys (server-side) |
 | `DAYTONA_API_KEY` | no | Isolated GitHub scans |

@@ -10,6 +10,10 @@
  *
  * Public URL after deploy: https://$VERCEL_PROJECT_PRODUCTION_URL/mcp
  * (do not hardcode a hostname in this repo).
+ *
+ * Fail-closed like mcp-server/http.js: MCP_BEARER_TOKEN must be set in the
+ * Vercel project env. GET /health returns 503 (not 200) when it is unset —
+ * enforced inside handleWebRequest (same requireConfiguredToken helper).
  */
 
 import { handleWebRequest } from "../mcp-server/web-handler.js";
