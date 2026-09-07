@@ -49,6 +49,10 @@ function collectJsonRpcMessages(text, contentType = "") {
   const messages = [];
   const sseEvents = [];
 
+  if (!raw.trim()) {
+    return { kind: "empty", messages, sseEvents, raw };
+  }
+
   if (type.includes("text/event-stream") || looksLikeSse(raw)) {
     for (const evt of parseSseEvents(raw)) {
       sseEvents.push(evt);
@@ -71,10 +75,6 @@ function collectJsonRpcMessages(text, contentType = "") {
     if (Array.isArray(parsed.value)) messages.push(...parsed.value);
     else messages.push(parsed.value);
     return { kind: "json", messages, sseEvents, raw };
-  }
-
-  if (!raw.trim()) {
-    return { kind: "empty", messages, sseEvents, raw };
   }
 
   return { kind: "non-json", messages, sseEvents, raw };
