@@ -2,9 +2,10 @@
  * Probe the Vercel Fluid Compute entry the way Vercel Node does:
  * ESM handler, require(esm) disabled, MCP_BEARER_TOKEN unset then set.
  *
- * Fail-closed: GET /health must NOT be 200 when the token is unset (503).
- * POST /mcp stays 401 without a Bearer. With token configured, health is 200
- * and authenticated initialize succeeds. Also asserts no ERR_REQUIRE_ESM.
+ * Product constraint: GET /health is liveness → 200 even when token unset.
+ * Fail-closed: POST /mcp → 401 when unset/invalid. With token configured,
+ * health is 200 and authenticated initialize succeeds. Also asserts no
+ * ERR_REQUIRE_ESM.
  */
 
 async function main() {
@@ -12,14 +13,11 @@ async function main() {
   const { default: handler } = await import("../../api/index.mjs");
 
   const healthUnset = await handler.fetch(new Request("http://127.0.0.1/health"));
-  if (healthUnset.status === 200) {
-    throw new Error("GET /health must not return 200 when MCP_BEARER_TOKEN is unset (fail-closed)");
-  }
-  if (healthUnset.status !== 503) {
-    throw new Error(`GET /health expected 503 when token unset, got ${healthUnset.status}`);
+  if (healthUnset.status !== 200) {
+    throw new Error(`GET /health expected 200 when MCP_BEARER_TOKEN is unset (liveness), got ${healthUnset.status}`);
   }
   const healthUnsetBody = await healthUnset.json();
-  if (healthUnsetBody.ok !== false) {
+  if (!healthUnsetBody.ok || healthUnsetBody.transport !== "streamable-http") {
     throw new Error(`unexpected health payload when unset: ${JSON.stringify(healthUnsetBody)}`);
   }
 
