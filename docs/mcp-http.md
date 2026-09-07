@@ -50,7 +50,9 @@ echo `LLM_API_KEY`, `MCP_BEARER_TOKEN`, or other secrets.
 
 `vercel.json` enables **Fluid Compute** and rewrites `/mcp` + `/health` to a
 Node function (`api/index.mjs`) that uses the Web Standard `Request`/`Response`
-API — not Express `app.listen()`.
+API — not Express `app.listen()`. `GET /health` is unauthenticated liveness and
+must return 200 even when `MCP_BEARER_TOKEN` is unset. `/mcp` stays fail-closed
+(401) if the token is missing or invalid.
 
 Why this works on Vercel:
 

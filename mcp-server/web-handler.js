@@ -6,9 +6,19 @@
  * per POST so any instance can serve any request.
  */
 
-const { WebStandardStreamableHTTPServerTransport } = require("@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js");
-const { createMcpServer, SERVER_INFO } = require("./create-server");
 const { requireConfiguredToken, parseBearerToken, tokensEqual } = require("./auth");
+const { SERVER_INFO } = require("./server-info");
+
+// Load the ESM MCP SDK via import() and defer create-server (octokit / tools)
+// until after /health and Bearer checks. Top-level require() of that graph is
+// what crashed Vercel with ERR_REQUIRE_ESM before the handler could run.
+async function loadMcpRuntime() {
+  const [{ WebStandardStreamableHTTPServerTransport }, { createMcpServer }] = await Promise.all([
+    import("@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js"),
+    import("./create-server.js"),
+  ]);
+  return { WebStandardStreamableHTTPServerTransport, createMcpServer };
+}
 
 const DEFAULT_PATH = "/mcp";
 
@@ -129,6 +139,7 @@ async function handleWebRequest(request, options = {}) {
   }
 
   const enableJsonResponse = jsonResponseEnabled(env, options.jsonResponse);
+  const { WebStandardStreamableHTTPServerTransport, createMcpServer } = await loadMcpRuntime();
   const server = createMcpServer();
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

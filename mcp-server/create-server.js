@@ -12,12 +12,7 @@ const { analyzeCoupling } = require("../lib/analyzers/coupling");
 const { detectDrift } = require("../lib/analyzers/drift");
 const { resolveRepo } = require("../lib/mcp-repo");
 const { checkMcpHealth } = require("../src/lib/mcp-health");
-
-const SERVER_INFO = {
-  name: "CodeSentinel",
-  version: "1.0.0",
-  description: "AI-powered codebase health analysis — dead code, circular deps, coupling, architectural drift",
-};
+const { SERVER_INFO } = require("./server-info");
 
 function createMcpServer() {
   const server = new McpServer(SERVER_INFO);

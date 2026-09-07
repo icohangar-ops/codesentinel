@@ -161,6 +161,46 @@ describe("Streamable HTTP MCP server", () => {
 });
 
 describe("Web-standard handler (Vercel Fluid Compute shape)", () => {
+  it("serves GET /health with 200 when MCP_BEARER_TOKEN is unset", async () => {
+    const prev = process.env.MCP_BEARER_TOKEN;
+    delete process.env.MCP_BEARER_TOKEN;
+    try {
+      const health = await handleWebRequest(new Request("http://127.0.0.1/health"));
+      assert.equal(health.status, 200);
+      const body = await health.json();
+      assert.equal(body.ok, true);
+      assert.equal(body.transport, "streamable-http");
+      assert.equal(body.mode, "stateless");
+    } finally {
+      if (prev === undefined) delete process.env.MCP_BEARER_TOKEN;
+      else process.env.MCP_BEARER_TOKEN = prev;
+    }
+  });
+
+  it("returns 401 on /mcp when MCP_BEARER_TOKEN is unset", async () => {
+    const prev = process.env.MCP_BEARER_TOKEN;
+    delete process.env.MCP_BEARER_TOKEN;
+    try {
+      const unauth = await handleWebRequest(
+        new Request("http://127.0.0.1/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "initialize",
+            params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "0" } },
+          }),
+        })
+      );
+      assert.equal(unauth.status, 401);
+      assert.equal(unauth.headers.get("www-authenticate")?.startsWith("Bearer"), true);
+    } finally {
+      if (prev === undefined) delete process.env.MCP_BEARER_TOKEN;
+      else process.env.MCP_BEARER_TOKEN = prev;
+    }
+  });
+
   it("serves health and rejects unauthenticated initialize without Node listen", async () => {
     const health = await handleWebRequest(new Request("http://127.0.0.1/health"), {
       bearerToken: TOKEN,
@@ -205,6 +245,65 @@ describe("Web-standard handler (Vercel Fluid Compute shape)", () => {
     assert.equal(init.status, 200);
     const initBody = await init.json();
     assert.equal(initBody.result.serverInfo.name, "CodeSentinel");
+  });
+
+  it("boots api/index.mjs without createRequire when the token is unset", async () => {
+    const prev = process.env.MCP_BEARER_TOKEN;
+    delete process.env.MCP_BEARER_TOKEN;
+    try {
+      const { default: handler } = await import("../api/index.mjs");
+      const health = await handler.fetch(new Request("http://127.0.0.1/health"));
+      assert.equal(health.status, 200);
+      const mcp = await handler.fetch(
+        new Request("http://127.0.0.1/mcp", {
+          method: "POST",
+          headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            method: "initialize",
+            params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "0" } },
+          }),
+        })
+      );
+      assert.equal(mcp.status, 401);
+    } finally {
+      if (prev === undefined) delete process.env.MCP_BEARER_TOKEN;
+      else process.env.MCP_BEARER_TOKEN = prev;
+    }
+  });
+});
+
+describe("Vercel boot without require(esm)", () => {
+  it("GET /health is 200 and POST /mcp is 401 under --no-experimental-require-module", async () => {
+    const child = spawn(
+      process.execPath,
+      ["--no-experimental-require-module", path.join(__dirname, "helpers/vercel-boot-probe.js")],
+      {
+        cwd: path.join(__dirname, ".."),
+        env: { ...process.env, MCP_BEARER_TOKEN: "" },
+        stdio: ["ignore", "pipe", "pipe"],
+      }
+    );
+    const stdout = [];
+    const stderr = [];
+    child.stdout.on("data", (chunk) => stdout.push(chunk));
+    child.stderr.on("data", (chunk) => stderr.push(chunk));
+    const code = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        child.kill("SIGTERM");
+        reject(new Error("Vercel boot probe timed out"));
+      }, 15000);
+      child.on("close", (exitCode) => {
+        clearTimeout(timer);
+        resolve(exitCode);
+      });
+    });
+    const out = Buffer.concat(stdout).toString("utf8");
+    const err = Buffer.concat(stderr).toString("utf8");
+    assert.equal(code, 0, err || out);
+    assert.match(out, /ok/);
+    assert.doesNotMatch(err, /ERR_REQUIRE_ESM/);
   });
 });
 
