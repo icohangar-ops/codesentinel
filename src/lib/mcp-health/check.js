@@ -1,13 +1,23 @@
 /**
- * Orchestrate MCP protocol health: handshake, schema hash/drift, secret scan,
+ * Orchestrate MCP protocol health: handshake, silent-exception probe,
+ * Streamable HTTP reason-code matrix, schema hash/drift, secret scan,
  * and discovery-latency metrics. HTTP 2xx never implies protocol health.
  */
 
 const { runHandshake } = require("./handshake");
 const { hashToolSchemas, compareToolSchemas } = require("./schema");
 const { scanToolSecrets } = require("./secrets");
+const { probeSilentException, silentProbeAlarm } = require("./silent-probe");
+const { runStreamableDiagnostics, streamableSilentAlarms } = require("./streamable-diag");
+const { classifyHandshakeFailure, REASON_HINTS } = require("./reason-codes");
 
 const DEFAULT_LATENCY_WARN_MS = 5_000;
+
+function probesEnabled(options, key) {
+  if (options.probes === false) return false;
+  if (options[key] === false) return false;
+  return true;
+}
 
 function httpRecord(handshake) {
   const status = handshake.httpStatus;
@@ -19,9 +29,18 @@ function httpRecord(handshake) {
   };
 }
 
-function buildAlarms({ handshake, drift, secrets, latency, latencyWarnMs }) {
+function uniqueCodes(codes) {
+  const seen = [];
+  for (const code of codes) {
+    if (code && !seen.includes(code)) seen.push(code);
+  }
+  return seen;
+}
+
+function buildAlarms({ handshake, drift, secrets, latency, latencyWarnMs, silentProbe, streamableHttp }) {
   const alarms = [];
   const protocolHealthy = Boolean(handshake.initialize?.ok && handshake.toolsList?.ok);
+  const handshakeReason = protocolHealthy ? null : classifyHandshakeFailure(handshake);
 
   if (!protocolHealthy) {
     alarms.push({
@@ -31,8 +50,14 @@ function buildAlarms({ handshake, drift, secrets, latency, latencyWarnMs }) {
       reason: handshake.initialize?.ok
         ? handshake.toolsList.error
         : handshake.initialize.error,
+      reasonCode: handshakeReason,
+      hint: handshakeReason ? REASON_HINTS[handshakeReason] : undefined,
     });
   }
+
+  const silentAlarm = silentProbeAlarm(silentProbe);
+  if (silentAlarm) alarms.push(silentAlarm);
+  alarms.push(...streamableSilentAlarms(streamableHttp));
 
   if (drift?.changed) {
     alarms.push({
@@ -74,6 +99,17 @@ function overallOk(alarms) {
   return !alarms.some((alarm) => alarm.severity === "critical");
 }
 
+function collectReasonCodes({ handshake, silentProbe, streamableHttp, protocolHealthy }) {
+  const codes = [];
+  if (!protocolHealthy) {
+    const classified = classifyHandshakeFailure(handshake);
+    if (classified) codes.push(classified);
+  }
+  if (silentProbe?.reasonCode) codes.push(silentProbe.reasonCode);
+  if (streamableHttp?.reasonCodes) codes.push(...streamableHttp.reasonCodes);
+  return uniqueCodes(codes);
+}
+
 /**
  * @param {string} endpoint Remote MCP URL
  * @param {object} [options]
@@ -81,6 +117,9 @@ function overallOk(alarms) {
  * @param {object|string|Array} [options.baseline] previous tools, hash, or { tools, hash }
  * @param {number} [options.timeoutMs]
  * @param {number} [options.latencyWarnMs]
+ * @param {boolean} [options.probes] set false to skip silent + streamable probes
+ * @param {boolean} [options.silentException]
+ * @param {boolean} [options.streamableHttp]
  */
 async function checkMcpHealth(endpoint, options = {}) {
   if (!endpoint || typeof endpoint !== "string") {
@@ -94,9 +133,32 @@ async function checkMcpHealth(endpoint, options = {}) {
   const drift = options.baseline != null ? compareToolSchemas(options.baseline, tools) : null;
   const secrets = scanToolSecrets(tools);
   const latency = handshake.latency || { initializeMs: 0, toolsListMs: 0, handshakeMs: 0 };
-  const alarms = buildAlarms({ handshake, drift, secrets, latency, latencyWarnMs });
+
+  let silentProbe = null;
+  if (probesEnabled(options, "silentException")) {
+    silentProbe = await probeSilentException(endpoint, {
+      ...options,
+      sessionId: handshake.sessionId,
+    });
+  }
+
+  let streamableHttp = null;
+  if (probesEnabled(options, "streamableHttp")) {
+    streamableHttp = await runStreamableDiagnostics(endpoint, options);
+  }
+
+  const alarms = buildAlarms({
+    handshake,
+    drift,
+    secrets,
+    latency,
+    latencyWarnMs,
+    silentProbe,
+    streamableHttp,
+  });
   const http = httpRecord(handshake);
   const protocolHealthy = Boolean(handshake.initialize?.ok && handshake.toolsList?.ok);
+  const reasonCodes = collectReasonCodes({ handshake, silentProbe, streamableHttp, protocolHealthy });
 
   return {
     endpoint,
@@ -124,6 +186,9 @@ async function checkMcpHealth(endpoint, options = {}) {
     },
     secrets,
     latency,
+    silentProbe,
+    streamableHttp,
+    reasonCodes,
     alarms,
     tools: protocolHealthy ? tools : [],
     steps: handshake.steps,

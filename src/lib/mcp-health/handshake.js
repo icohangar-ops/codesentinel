@@ -4,14 +4,15 @@
  */
 
 const { safeFetch } = require("../resilience");
+const { collectJsonRpcMessages, findJsonRpcById, findSseEndpoint } = require("./jsonrpc");
 const {
-  collectJsonRpcMessages,
-  findJsonRpcById,
-  findSseEndpoint,
-} = require("./jsonrpc");
-
-const PROTOCOL_VERSION = "2025-03-26";
-const CLIENT_INFO = { name: "codesentinel-mcp-health", version: "1.0.0" };
+  PROTOCOL_VERSION,
+  CLIENT_INFO,
+  originFrom,
+  resolveUrl,
+  readBody,
+  postRpc,
+} = require("./http");
 
 function nowNs() {
   return process.hrtime.bigint();
@@ -19,75 +20,6 @@ function nowNs() {
 
 function msSince(startNs) {
   return Number(nowNs() - startNs) / 1e6;
-}
-
-function originFrom(url) {
-  try {
-    return new URL(url).origin;
-  } catch {
-    return undefined;
-  }
-}
-
-function resolveUrl(base, maybeRelative) {
-  return new URL(maybeRelative, base).toString();
-}
-
-async function readBody(response, { timeoutMs, stopWhen } = {}) {
-  const contentType = response.headers.get("content-type") || "";
-  if (!response.body || typeof response.body.getReader !== "function") {
-    const text = typeof response.text === "function" ? await response.text() : "";
-    return { text, contentType };
-  }
-
-  const needsStream = Boolean(stopWhen) || contentType.toLowerCase().includes("text/event-stream");
-  if (!needsStream) {
-    return { text: await response.text(), contentType };
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let text = "";
-  let timedOut = false;
-  const timer = timeoutMs
-    ? setTimeout(() => {
-        timedOut = true;
-        reader.cancel("mcp-health-timeout").catch(() => {});
-      }, timeoutMs)
-    : null;
-  if (timer && typeof timer.unref === "function") timer.unref();
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      text += decoder.decode(value, { stream: true });
-      if (stopWhen && stopWhen(text)) {
-        await reader.cancel().catch(() => {});
-        break;
-      }
-    }
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-
-  return { text, contentType, timedOut };
-}
-
-function sessionIdFrom(response) {
-  return response.headers.get("mcp-session-id") || response.headers.get("Mcp-Session-Id") || null;
-}
-
-function headersFor(url, { sessionId, extraHeaders } = {}) {
-  const headers = {
-    Accept: "application/json, text/event-stream",
-    "Content-Type": "application/json",
-    "MCP-Protocol-Version": PROTOCOL_VERSION,
-    Origin: originFrom(url) || "http://localhost",
-    ...extraHeaders,
-  };
-  if (sessionId) headers["Mcp-Session-Id"] = sessionId;
-  return headers;
 }
 
 function interpretRpc(payload, id, httpStatus) {
@@ -114,29 +46,6 @@ function interpretRpc(payload, id, httpStatus) {
     return { ok: false, error: `JSON-RPC response id ${id} missing result` };
   }
   return { ok: true, result: message.result };
-}
-
-async function postRpc(url, message, options) {
-  const fetchImpl = options.fetchImpl;
-  const response = await safeFetch(url, {
-    method: "POST",
-    headers: headersFor(url, { sessionId: options.sessionId, extraHeaders: options.headers }),
-    body: JSON.stringify(message),
-    fetchImpl,
-    timeoutMs: options.timeoutMs,
-    maxAttempts: options.maxAttempts ?? 1,
-    allowlist: options.allowlist,
-  });
-
-  const body = await readBody(response, { timeoutMs: options.sseTimeoutMs ?? options.timeoutMs });
-  const payload = collectJsonRpcMessages(body.text, body.contentType);
-  return {
-    response,
-    httpStatus: response.status,
-    sessionId: sessionIdFrom(response) || options.sessionId || null,
-    payload,
-    timedOut: body.timedOut,
-  };
 }
 
 function nextId(state) {
@@ -351,4 +260,5 @@ module.exports = {
   runHandshake,
   handshakeStreamableHttp,
   handshakeSse,
+  interpretRpc,
 };

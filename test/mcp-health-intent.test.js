@@ -8,6 +8,10 @@ describe("mcp health intent", () => {
     assert.equal(mcp.type, "mcp_health");
     assert.equal(mcp.mcpUrl, "https://tools.example.com/mcp");
 
+    const streamable = parseAnalysisRequest("Diagnose streamable http on https://tools.example.com/mcp");
+    assert.equal(streamable.type, "mcp_health");
+    assert.equal(streamable.mcpUrl, "https://tools.example.com/mcp");
+
     const full = parseAnalysisRequest("Run a full health scan on https://github.com/org/repo");
     assert.equal(full.type, "full");
     assert.equal(full.mcpUrl, null);

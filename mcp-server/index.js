@@ -14,7 +14,7 @@
  *  - detect_architectural_drift: Check layer boundary violations
  *  - full_health_scan: Run all analyses and return a health score
  *  - explain_finding: Get AI-powered explanation of a specific finding
- *  - check_mcp_health: Remote MCP handshake health (initialize + tools/list)
+ *  - check_mcp_health: Remote MCP handshake, silent-exception probe, Streamable HTTP reason codes
  */
 
 const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
@@ -234,7 +234,7 @@ server.tool(
 // Tool 6: Remote MCP protocol health (not HTTP uptime)
 server.tool(
   "check_mcp_health",
-  "Probe a remote MCP server with a synthetic Streamable HTTP / SSE handshake (initialize + tools/list). HTTP 200 is not treated as healthy. Returns protocol status, discovery latency, tool-schema hash/drift, and secret-scan findings from tool descriptions.",
+  "Probe a remote MCP server: Streamable HTTP / SSE handshake (initialize + tools/list), a known-bad tools/call error-shape probe, and a Streamable HTTP diagnostic matrix (WRONG_METHOD, WRONG_ACCEPT, MISSING_SESSION, GET_VS_POST, SESSION_STICKY_MISMATCH). HTTP 200 is not treated as healthy.",
   {
     endpoint: z.string().describe("Remote MCP URL (Streamable HTTP or legacy SSE)"),
     transport: z
@@ -243,12 +243,17 @@ server.tool(
       .describe("Transport probe mode. auto tries Streamable HTTP then legacy SSE"),
     baseline_hash: z.string().optional().describe("Previous canonical tools/list SHA-256 hex for drift alarms"),
     timeout_ms: z.number().optional().describe("Per-request timeout in milliseconds"),
+    include_probes: z
+      .boolean()
+      .optional()
+      .describe("Run silent-exception + Streamable HTTP diagnostics (default true)"),
   },
-  async ({ endpoint, transport, baseline_hash, timeout_ms }) => {
+  async ({ endpoint, transport, baseline_hash, timeout_ms, include_probes }) => {
     const result = await checkMcpHealth(endpoint, {
       transport: transport || "auto",
       baseline: baseline_hash,
       timeoutMs: timeout_ms,
+      probes: include_probes !== false,
     });
     return {
       content: [

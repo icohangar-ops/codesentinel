@@ -32,7 +32,7 @@ Dead code, circular dependencies, excessive coupling, and architectural drift ar
 | `detect_architectural_drift` | Layer boundary violations (UI→Data, Business→UI, etc.) |
 | `full_health_scan` | All four analyses + 0–100 health score + prioritized action items |
 | `explain_finding` | AI-powered detailed explanation of any finding |
-| `check_mcp_health` | Remote MCP handshake (`initialize` + `tools/list`), schema drift, secret scan — HTTP 200 is not healthy |
+| `check_mcp_health` | Remote MCP handshake, silent-exception / JSON-RPC error-shape probe, Streamable HTTP reason codes, schema drift, secret scan — HTTP 200 is not healthy |
 
 ---
 
@@ -95,6 +95,9 @@ A remote MCP endpoint can return **HTTP 200** while `initialize`, `tools/list`,
 or the SSE stream fails. CodeSentinel probes the protocol itself:
 
 - Synthetic Streamable HTTP / legacy SSE handshake (`initialize` + `tools/list`)
+- Known-bad `tools/call` error-shape probe (alarm on HTTP 200 empty/swallowed protocol)
+- Streamable HTTP diagnostic matrix with reason codes (`WRONG_METHOD`,
+  `WRONG_ACCEPT`, `MISSING_SESSION`, `GET_VS_POST`, `SESSION_STICKY_MISMATCH`)
 - Canonical tool-schema hash and drift alarms
 - Discovery-latency metrics
 - Secret scanning of tool descriptions/schemas before they enter agent context
@@ -236,11 +239,11 @@ codehealth-mcp/
 │   └── analyzers/            # dead-code, circular-deps, coupling, drift, mcp-health
 ├── src/lib/
 │   ├── resilience/           # safeFetch / retry
-│   └── mcp-health/           # handshake, schema hash, secret scan, CLI
+│   └── mcp-health/           # handshake, silent probe, Streamable reason codes, CLI
 ├── mcp-server/
 │   ├── index.js              # MCP server (code analyzers + check_mcp_health)
 │   └── package.json
-├── test/                     # handshake / drift / secret-scan tests
+├── test/                     # handshake / silent-probe / streamable-diag / drift / secrets
 └── functions/                # Slack function definitions
 ```
 
