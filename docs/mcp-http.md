@@ -39,11 +39,13 @@ echo `LLM_API_KEY`, `MCP_BEARER_TOKEN`, or other secrets.
 
 ## Deploy on Vercel (preferred)
 
-`vercel.json` enables **Fluid Compute** and rewrites `/mcp` + `/health` to a
-Node function (`api/index.mjs`) that uses the Web Standard `Request`/`Response`
-API — not Express `app.listen()`. `GET /health` is unauthenticated liveness and
-must return 200 even when `MCP_BEARER_TOKEN` is unset. `/mcp` stays fail-closed
-(401) if the token is missing or invalid.
+`vercel.json` enables **Fluid Compute**, sets `outputDirectory` to `public`, and
+rewrites `/mcp` + `/health` to a Node function (`api/index.mjs`) that uses the
+Web Standard `Request`/`Response` API — not Express `app.listen()`. The Glama
+claim is a real static file at `public/.well-known/glama.json` (no rewrite).
+`GET /health` is unauthenticated liveness and must return 200 even when
+`MCP_BEARER_TOKEN` is unset. `/mcp` stays fail-closed (401) if the token is
+missing or invalid.
 
 Why this works on Vercel:
 
@@ -95,7 +97,7 @@ After the Vercel production URL exists, Add MCP Server → **Connector**:
 | Authentication | API Key |
 | Header name | `Authorization` |
 | Header value | `Bearer $MCP_BEARER_TOKEN` (same secret as the Vercel env) |
-| Ownership claim | Served at `/.well-known/glama.json` (no auth; not rewritten to `/api`) |
+| Ownership claim | Static `public/.well-known/glama.json` at `/.well-known/glama.json` (no auth; not rewritten) |
 
 Client snippet (replace the host from Vercel):
 
