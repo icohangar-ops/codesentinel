@@ -8,17 +8,8 @@ HTTP mode is **stateless** (`sessionIdGenerator: undefined`, new server +
 transport per POST, JSON responses by default). That matches Vercel’s
 multi-instance model — no sticky sessions.
 
-Live production host is documented below. For new deploys, use the platform URL
-Vercel assigns (or your Fly/Railway host) — do not invent a hostname.
-
-## Production (live)
-
-| Endpoint | URL |
-|----------|-----|
-| MCP (Streamable HTTP) | `https://codesentinel-rho.vercel.app/mcp` |
-| Health | `https://codesentinel-rho.vercel.app/health` |
-
-Auth: `Authorization: Bearer <MCP_BEARER_TOKEN>` on `/mcp` only. Set `MCP_BEARER_TOKEN` in the Vercel project env — never commit the secret.
+Do **not** invent a hostname. Use the platform URL (`VERCEL_PROJECT_PRODUCTION_URL`
+or your Fly/Railway host).
 
 ## Local run
 
@@ -40,14 +31,11 @@ MCP_BEARER_TOKEN="replace-with-a-long-random-secret" npm run mcp:http:smoke
 | Condition | Result |
 |-----------|--------|
 | `MCP_BEARER_TOKEN` unset at process start (Node listen) | Process exits; nothing listens |
-| `MCP_BEARER_TOKEN` unset on Vercel (web-handler) | `GET /health` → **200** (liveness); `/mcp` → **401** |
 | Missing / invalid `Authorization` on `/mcp` | HTTP 401 + `WWW-Authenticate: Bearer` |
 | Valid `Bearer` token | Streamable HTTP JSON-RPC |
 
-`/health` and `/healthz` are liveness only. They return **200** even when
-`MCP_BEARER_TOKEN` is unset. They do not list tools and do not echo `LLM_API_KEY`,
-`MCP_BEARER_TOKEN`, or other secrets. Fail-closed auth is on `/mcp`, not health.
-Node `http.js` listen still exits if the token is unset.
+`/health` and `/healthz` are liveness only. They do not list tools and do not
+echo `LLM_API_KEY`, `MCP_BEARER_TOKEN`, or other secrets.
 
 ## Deploy on Vercel (preferred)
 
@@ -85,36 +73,38 @@ npx vercel --prod
 | `GITHUB_TOKEN` | no | Private repo fetch |
 | `MCP_HTTP_PATH` | no | Default `/mcp` |
 
-Public URLs (production):
+Public URLs (from Vercel, not this repo):
 
-- MCP: `https://codesentinel-rho.vercel.app/mcp`
-- Health: `https://codesentinel-rho.vercel.app/health`
+- MCP: `https://$VERCEL_PROJECT_PRODUCTION_URL/mcp`
+- Health: `https://$VERCEL_PROJECT_PRODUCTION_URL/health`
+- Glama claim (unauthenticated): `https://$VERCEL_PROJECT_PRODUCTION_URL/.well-known/glama.json`
 
 Disable **Deployment Protection** (Vercel Authentication) on production.
 Glama’s health check must reach `/mcp` with only your Bearer header.
 
 ## Glama connector — exact fields
 
-Add MCP Server → **Connector** (live production host):
+After the Vercel production URL exists, Add MCP Server → **Connector**:
 
 | Field | What to enter |
 |-------|----------------|
 | Name | CodeSentinel |
 | Description | Codebase health: dead code, circular deps, coupling, drift |
-| Server URL | `https://codesentinel-rho.vercel.app/mcp` |
+| Server URL | `https://$VERCEL_PROJECT_PRODUCTION_URL/mcp` |
 | Transport | `streamable-http` (not stdio, not legacy SSE) |
 | Authentication | API Key |
 | Header name | `Authorization` |
 | Header value | `Bearer $MCP_BEARER_TOKEN` (same secret as the Vercel env) |
+| Ownership claim | Served at `/.well-known/glama.json` (no auth; not rewritten to `/api`) |
 
-Client snippet (`MCP_BEARER_TOKEN` from env — never commit the secret):
+Client snippet (replace the host from Vercel):
 
 ```json
 {
   "mcpServers": {
     "codesentinel": {
       "type": "streamable-http",
-      "url": "https://codesentinel-rho.vercel.app/mcp",
+      "url": "https://${VERCEL_PROJECT_PRODUCTION_URL}/mcp",
       "headers": {
         "Authorization": "Bearer ${MCP_BEARER_TOKEN}"
       }
