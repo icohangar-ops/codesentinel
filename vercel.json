@@ -2,8 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "fluid": true,
+  "outputDirectory": "public",
   "rewrites": [
-    { "source": "/.well-known/glama.json", "destination": "/glama.json" },
     { "source": "/mcp", "destination": "/api" },
     { "source": "/health", "destination": "/api" },
     { "source": "/healthz", "destination": "/api" }

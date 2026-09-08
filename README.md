@@ -32,7 +32,7 @@ Dead code, circular dependencies, excessive coupling, and architectural drift ar
 | `detect_architectural_drift` | Layer boundary violations (UI→Data, Business→UI, etc.) |
 | `full_health_scan` | All four analyses + 0–100 health score + prioritized action items |
 | `explain_finding` | AI-powered detailed explanation of any finding |
-| `check_mcp_health` | Remote MCP handshake, silent-exception / JSON-RPC error-shape probe, Streamable HTTP reason codes, schema drift, secret scan — HTTP 200 is not healthy |
+| `check_mcp_health` | Remote MCP handshake (`initialize` + `tools/list`), schema drift, secret scan — HTTP 200 is not healthy |
 
 ---
 
@@ -60,23 +60,21 @@ Dead code, circular dependencies, excessive coupling, and architectural drift ar
 
 ### Remote Streamable HTTP (Glama / hosted)
 
-Public HTTPS + `streamable-http` is required to list CodeSentinel as a [Glama remote connector](https://glama.ai/mcp/faq).
-
-**Live production:** MCP `https://codesentinel-rho.vercel.app/mcp` · health `https://codesentinel-rho.vercel.app/health`. Auth uses env `MCP_BEARER_TOKEN` (Bearer) — never commit the secret.
+Public HTTPS + `streamable-http` is required to list CodeSentinel as a [Glama remote connector](https://glama.ai/mcp/faq). Replace the host from your deploy env — do not commit a fake hostname.
 
 ```bash
 export MCP_BEARER_TOKEN="replace-with-a-long-random-secret"
 npm run mcp:http
 ```
 
-Local default: `http://127.0.0.1:8787/mcp` (health: `GET /health`). Production is **HTTPS**.
+Local default: `http://127.0.0.1:8787/mcp` (health: `GET /health`). Production must be **HTTPS**.
 
 ```json
 {
   "mcpServers": {
     "codesentinel": {
       "type": "streamable-http",
-      "url": "https://codesentinel-rho.vercel.app/mcp",
+      "url": "https://${MCP_HTTP_HOST}/mcp",
       "headers": {
         "Authorization": "Bearer ${MCP_BEARER_TOKEN}"
       }
@@ -89,7 +87,7 @@ Cursor / Claude remote connectors use the same `url` + `Authorization` header. U
 
 ### Deploy on Vercel (public HTTPS)
 
-Stateless Streamable HTTP (JSON request/response) runs on **Vercel Fluid Compute**. No sticky sessions. Production host: **`codesentinel-rho.vercel.app`**.
+Stateless Streamable HTTP (JSON request/response) runs on **Vercel Fluid Compute**. No sticky sessions. Do not invent a hostname — use the URL Vercel assigns.
 
 ```bash
 npx vercel          # preview
@@ -101,24 +99,25 @@ npx vercel --prod
 # GET /health must be 200 even if MCP_BEARER_TOKEN is not set yet.
 ```
 
-Live MCP endpoint:
+After deploy, the MCP endpoint is:
 
-`https://codesentinel-rho.vercel.app/mcp`
+`https://$VERCEL_PROJECT_PRODUCTION_URL/mcp`
 
-Health: `https://codesentinel-rho.vercel.app/health`.
+(`VERCEL_URL` for a specific deployment). Health: `https://$VERCEL_PROJECT_PRODUCTION_URL/health`.
 
 Turn **off** Vercel Deployment Protection on the production host, or Glama/clients cannot complete `initialize`.
 
-### Glama connector fields (live production)
+### Glama connector fields (fill after the Vercel URL exists)
 
 | Field | Value |
 |-------|--------|
 | Type | Connector (remote MCP) |
-| Server URL | `https://codesentinel-rho.vercel.app/mcp` |
+| Server URL | `https://$VERCEL_PROJECT_PRODUCTION_URL/mcp` |
 | Transport | `streamable-http` |
 | Auth | API Key / Bearer |
 | Header | `Authorization` |
-| Header value | `Bearer $MCP_BEARER_TOKEN` (same secret as the Vercel env — never commit) |
+| Header value | `Bearer $MCP_BEARER_TOKEN` (same secret as the Vercel env) |
+| Ownership claim | `https://$VERCEL_PROJECT_PRODUCTION_URL/.well-known/glama.json` (static `public/` file) |
 
 See [`docs/mcp-http.md`](docs/mcp-http.md) for Vercel env vars, Fluid Compute notes, and Docker/Fly fallback.
 
@@ -167,9 +166,6 @@ A remote MCP endpoint can return **HTTP 200** while `initialize`, `tools/list`,
 or the SSE stream fails. CodeSentinel probes the protocol itself:
 
 - Synthetic Streamable HTTP / legacy SSE handshake (`initialize` + `tools/list`)
-- Known-bad `tools/call` error-shape probe (alarm on HTTP 200 empty/swallowed protocol)
-- Streamable HTTP diagnostic matrix with reason codes (`WRONG_METHOD`,
-  `WRONG_ACCEPT`, `MISSING_SESSION`, `GET_VS_POST`, `SESSION_STICKY_MISMATCH`)
 - Canonical tool-schema hash and drift alarms
 - Discovery-latency metrics
 - Secret scanning of tool descriptions/schemas before they enter agent context
@@ -311,14 +307,14 @@ codehealth-mcp/
 │   └── analyzers/            # dead-code, circular-deps, coupling, drift, mcp-health
 ├── src/lib/
 │   ├── resilience/           # safeFetch / retry
-│   └── mcp-health/           # handshake, silent probe, Streamable reason codes, CLI
+│   └── mcp-health/           # handshake, schema hash, secret scan, CLI
 ├── mcp-server/
 │   ├── index.js              # MCP stdio entry (unchanged tools)
 │   ├── http.js               # Streamable HTTP (stateless, Bearer auth)
 │   ├── create-server.js      # Shared tool registration
 │   └── package.json
-├── docs/mcp-http.md          # Remote / Glama / Fly / Railway / Vercel notes
-├── test/                     # handshake / silent-probe / streamable-diag / HTTP transport / secrets
+├── docs/mcp-http.md          # Remote / Glama / Fly / Railway notes
+├── test/                     # handshake / HTTP transport / secret-scan tests
 └── functions/                # Slack function definitions
 ```
 
