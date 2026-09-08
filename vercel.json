@@ -3,9 +3,24 @@
   "framework": null,
   "fluid": true,
   "rewrites": [
+    { "source": "/.well-known/glama.json", "destination": "/glama.json" },
     { "source": "/mcp", "destination": "/api" },
     { "source": "/health", "destination": "/api" },
     { "source": "/healthz", "destination": "/api" }
+  ],
+  "headers": [
+    {
+      "source": "/.well-known/glama.json",
+      "headers": [
+        { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+      ]
+    },
+    {
+      "source": "/glama.json",
+      "headers": [
+        { "key": "Content-Type", "value": "application/json; charset=utf-8" }
+      ]
+    }
   ],
   "functions": {
     "api/index.mjs": {
