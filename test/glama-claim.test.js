@@ -9,36 +9,40 @@ const EXPECTED = {
   claim: "glama_claim_vHBifndeHSeABPgFxW6qzO0hrCpYEb3i",
 };
 
+const CLAIM_FILES = [
+  "public/.well-known/glama.json",
+  "public/glama.json",
+  ".well-known/glama.json",
+  "glama.json",
+];
+
 function readJson(rel) {
   return JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8"));
 }
 
 describe("Glama HTTP claim", () => {
-  it("publishes the exact claim at .well-known/glama.json and the static fallback", () => {
-    assert.deepEqual(readJson(".well-known/glama.json"), EXPECTED);
-    assert.deepEqual(readJson("glama.json"), EXPECTED);
+  it("publishes the exact claim from public/.well-known and the static copies", () => {
+    for (const rel of CLAIM_FILES) {
+      assert.deepEqual(readJson(rel), EXPECTED, rel);
+    }
   });
 
-  it("does not rewrite /.well-known/* to the MCP /api handler", () => {
+  it("serves /.well-known from public output without a rewrite", () => {
     const vercel = readJson("vercel.json");
-    const rewrites = vercel.rewrites || [];
-    const wellKnown = rewrites.find((rule) => rule.source === "/.well-known/glama.json");
-    assert.ok(wellKnown, "expected an explicit /.well-known/glama.json rewrite");
-    assert.equal(wellKnown.destination, "/glama.json");
+    assert.equal(vercel.outputDirectory, "public");
+    assert.equal(vercel.fluid, true);
 
+    const rewrites = vercel.rewrites || [];
+    assert.deepEqual(
+      rewrites.map((rule) => rule.source),
+      ["/mcp", "/health", "/healthz"]
+    );
     for (const rule of rewrites) {
+      assert.equal(rule.destination, "/api");
       assert.notEqual(rule.source, "/:path*");
       assert.notEqual(rule.source, "/(.*)");
       assert.notEqual(rule.source, "/:path(.*)");
-      if (rule.source.startsWith("/.well-known")) {
-        assert.notEqual(rule.destination, "/api");
-      }
-    }
-
-    const mcpSources = rewrites.filter((rule) => ["/mcp", "/health", "/healthz"].includes(rule.source));
-    assert.equal(mcpSources.length, 3);
-    for (const rule of mcpSources) {
-      assert.equal(rule.destination, "/api");
+      assert.equal(rule.source.includes("well-known"), false);
     }
   });
 });
