@@ -39,8 +39,25 @@ function parseArgs(argv) {
   return args;
 }
 
-function loadBaseline(file) {
-  const raw = fs.readFileSync(path.resolve(file), "utf8");
+/**
+ * Resolve `file` under `baseDir` (cwd by default). Rejects `..` traversal,
+ * absolute paths outside the base, and empty input.
+ */
+function resolveSafePath(file, baseDir = process.cwd()) {
+  if (typeof file !== "string" || file.length === 0) {
+    throw new Error("Path is required");
+  }
+  const root = path.resolve(baseDir);
+  const resolved = path.resolve(root, file);
+  const relative = path.relative(root, resolved);
+  if (relative.startsWith(`..${path.sep}`) || relative === ".." || path.isAbsolute(relative)) {
+    throw new Error(`Refusing path outside allowed directory: ${file}`);
+  }
+  return resolved;
+}
+
+function loadBaseline(file, baseDir = process.cwd()) {
+  const raw = fs.readFileSync(resolveSafePath(file, baseDir), "utf8");
   return JSON.parse(raw);
 }
 
@@ -106,14 +123,18 @@ async function main() {
 
   if (args.writeBaseline && result.protocolHealthy) {
     const snapshot = { hash: result.schema.hash, tools: result.tools, timestamp: result.timestamp };
-    fs.writeFileSync(path.resolve(args.writeBaseline), `${JSON.stringify(snapshot, null, 2)}\n`);
+    fs.writeFileSync(resolveSafePath(args.writeBaseline), `${JSON.stringify(snapshot, null, 2)}\n`);
     process.stderr.write(`wrote baseline ${args.writeBaseline}\n`);
   }
 
   process.exit(result.ok ? 0 : 1);
 }
 
-main().catch((error) => {
-  process.stderr.write(`${error.message}\n`);
-  process.exit(2);
-});
+if (require.main === module) {
+  main().catch((error) => {
+    process.stderr.write(`${error.message}\n`);
+    process.exit(2);
+  });
+}
+
+module.exports = { resolveSafePath, loadBaseline };
