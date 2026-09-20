@@ -1,18 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.Cubiczan/codesentinel",
+  "name": "io.github.icohangar-ops/codesentinel",
   "description": "AI codebase health analysis: dead code, circular deps, coupling, architectural drift.",
   "version": "1.0.0",
-  "packages": [
-    {
-      "registryType": "npm",
-      "identifier": "@cubiczan/codesentinel-mcp",
-      "version": "1.0.0",
-      "transport": {
-        "type": "stdio"
-      }
-    }
-  ],
   "remotes": [
     {
       "type": "streamable-http",
