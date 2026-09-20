@@ -36,7 +36,7 @@ async function handleAssistantMessage(app) {
       const cached = analysisCache.get(cacheKey);
       if (cached) {
         await say({ text: "Using cached results...", thread_ts: threadTs });
-        const blocks = buildResponseBlocks(cached.results, cached.intent);
+        const blocks = buildResponseBlocks(cached.results, cached.intent, cached.summary, cached.summaryDegraded);
         await say({ text: "CodeSentinel analysis results", blocks, thread_ts: threadTs });
         return;
       }
@@ -94,7 +94,7 @@ async function handleAssistantMessage(app) {
       }
 
       // Cache results
-      analysisCache.set(cacheKey, { results, intent, summary });
+      analysisCache.set(cacheKey, { results, intent, summary, summaryDegraded });
 
     } catch (error) {
       logger.error("Error handling message:", error);
