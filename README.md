@@ -126,7 +126,7 @@ See [`docs/mcp-http.md`](docs/mcp-http.md) for Vercel env vars, Fluid Compute no
 ## Quick Start
 
 ```bash
-git clone https://github.com/Cubiczan/codesentinel.git
+git clone https://github.com/icohangar-ops/codesentinel.git
 cd codesentinel
 npm install
 cp .env.sample .env
@@ -181,6 +181,8 @@ Full write-up: [`docs/mcp-health.md`](docs/mcp-health.md).
 ### Daytona sandbox scans (optional)
 
 Set `DAYTONA_API_KEY` (and optionally `GITHUB_TOKEN` for private repos). MCP tools and Slack analysis will shallow-clone GitHub URLs in a Daytona VM and return live import-graph findings instead of demo data.
+
+**Fallback behavior (honest demo):** when Daytona is unavailable or a live scan misses its deadline (`SCAN_DEADLINE_MS` in `lib/repo-fetcher.js`), `lib/analysis-engine.js` flags the request `fallback: true` and the analyzers return deterministic demo findings rather than leaving the request unanswered — an intentional, documented fallback (`lib/analysis-engine.js`, `lib/repo-fetcher.js`), not a silent error. Live scans are marked `scanMode: "daytona"`.
 
 ```
 full_health_scan repo_path=https://github.com/org/repo
