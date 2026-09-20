@@ -1,4 +1,4 @@
-const { callLLM, LLMUnavailableError } = require("../../lib/llm-provider");
+const { callLLM, LLMUnavailableError, summarizeWithLadder } = require("../../lib/llm-provider");
 const { parseAnalysisRequest } = require("../../lib/intent-parser");
 const { runAnalysis } = require("../../lib/analysis-engine");
 const { buildResponseBlocks } = require("../../lib/block-kit-builder");
@@ -68,13 +68,16 @@ async function handleAssistantMessage(app) {
       // Step 4: Run analysis
       const results = await runAnalysis(intent);
 
-      // Step 5: Generate AI-powered summary
-      const summary = await callLLM(
+      // Step 5: AI summary behind the row-18 degradation ladder — an
+      // unavailable LLM degrades to the labeled deterministic findings
+      // instead of discarding the completed scan.
+      const { summary, degraded: summaryDegraded } = await summarizeWithLadder(
+        callLLM,
         `You are a senior software architect reviewing a codebase analysis. Based on these findings, provide a concise 3-5 sentence executive summary and 2-3 prioritized recommendations. Be specific and actionable.\n\nAnalysis type: ${intent.type}\nFindings:\n${JSON.stringify(results, null, 2)}`,
       );
 
       // Step 6: Build rich Block Kit response
-      const blocks = buildResponseBlocks(results, intent, summary);
+      const blocks = buildResponseBlocks(results, intent, summary, summaryDegraded);
 
       // Step 7: Update the thinking message with results
       try {

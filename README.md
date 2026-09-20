@@ -295,6 +295,16 @@ Add a new analyzer in `lib/analyzers/`, register it in `analysis-engine.js`, and
 
 ---
 
+## Propagation Matrix — Wave C rows
+
+### Row 18 — always-answer degradation ladder: ADOPTED (summary step)
+
+The Slack assistant flow (`listeners/assistant/message.js`) runs a deterministic scan (`runAnalysis`) and then requests an AI executive summary (`lib/llm-provider.js`). Before this change, an `LLMUnavailableError` at the summary step failed the whole flow — a completed deterministic scan was discarded and the user received an error. The summary step now runs through `summarizeWithLadder` (row 18's bounded ladder, FULL → DEGRADED): LLM unavailability degrades explicitly — the findings ship without the narrative, labeled in-line ("AI summary unavailable — LLM unreachable. Deterministic findings only"), and `LLMUnavailableError` remains the typed failure for everything else. Non-unavailability errors still fail loud. Tests: `test/assistant-degradation.test.js` (ladder behavior + labeled degraded marker in `lib/block-kit-builder.js`).
+
+**Revisit trigger:** the analysis path itself becomes model-dependent (model-scored findings rather than a model-summarized report) — then the ladder must extend to cover findings generation, not just the summary.
+
+---
+
 ## Project Structure
 
 ```
